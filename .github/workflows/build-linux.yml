@@ -1,0 +1,223 @@
+name: Build Linux Binaries
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build-linux-x86_64:
+    name: Linux x86_64
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        targets: x86_64-unknown-linux-gnu
+    
+    - name: Cache dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          target
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+    
+    - name: Install dependencies for packaging
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y tar gzip
+    
+    - name: Build
+      run: cargo build --release --target x86_64-unknown-linux-gnu
+    
+    - name: Strip binary
+      run: strip target/x86_64-unknown-linux-gnu/release/deepwiki-rs
+    
+    - name: Create tarball
+      run: |
+        mkdir -p tarball
+        tar -czf tarball/deepwiki-rs-linux-x86_64.tar.gz \
+          -C target/x86_64-unknown-linux-gnu/release deepwiki-rs
+    
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: deepwiki-rs-linux-x86_64
+        path: tarball/deepwiki-rs-linux-x86_64.tar.gz
+
+  build-linux-arm64:
+    name: Linux ARM64
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        targets: aarch64-unknown-linux-gnu
+    
+    - name: Cache dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          target
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+    
+    - name: Install dependencies for packaging
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y tar gzip gcc-aarch64-linux-gnu
+    
+    - name: Build
+      run: cargo build --release --target aarch64-unknown-linux-gnu
+    
+    - name: Strip binary
+      run: aarch64-linux-gnu-strip target/aarch64-unknown-linux-gnu/release/deepwiki-rs
+    
+    - name: Create tarball
+      run: |
+        mkdir -p tarball-arm64
+        tar -czf tarball-arm64/deepwiki-rs-linux-arm64.tar.gz \
+          -C target/aarch64-unknown-linux-gnu/release deepwiki-rs
+    
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: deepwiki-rs-linux-arm64
+        path: tarball-arm64/deepwiki-rs-linux-arm64.tar.gz
+
+  build-linux-musl:
+    name: Linux MUSL (Static)
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        targets: x86_64-unknown-linux-musl
+    
+    - name: Cache dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          target
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+    
+    - name: Install MUSL dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y musl-tools
+    
+    - name: Build
+      run: cargo build --release --target x86_64-unknown-linux-musl
+    
+    - name: Create tarball
+      run: |
+        mkdir -p tarball-musl
+        tar -czf tarball-musl/deepwiki-rs-linux-musl.tar.gz \
+          -C target/x86_64-unknown-linux-musl/release deepwiki-rs
+    
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: deepwiki-rs-linux-musl
+        path: tarball-musl/deepwiki-rs-linux-musl.tar.gz
+
+  create-packages:
+    name: Create Linux Packages
+    runs-on: ubuntu-latest
+    needs: [build-linux-x86_64, build-linux-arm64]
+    if: startsWith(github.ref, 'refs/tags/v')
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install packaging tools
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential debhelper
+    
+    - name: Download x86_64 binary
+      uses: actions/download-artifact@v4
+      with:
+        name: deepwiki-rs-linux-x86_64
+        path: artifacts
+    
+    - name: Download ARM64 binary
+      uses: actions/download-artifact@v4
+      with:
+        name: deepwiki-rs-linux-arm64
+        path: artifacts
+        continue-on-error: true
+    
+    - name: Create Debian package
+      run: |
+        mkdir -p debian
+        tar -xzf artifacts/deepwiki-rs-linux-x86_64.tar.gz -C debian
+        chmod +x debian/deepwiki-rs
+        
+        # Create control file
+        cat > debian/DEBIAN/control << 'EOF'
+        Package: deepwiki-rs
+        Version: ${{ github.ref_name }}
+        Section: utils
+        Priority: optional
+        Architecture: amd64
+        Maintainer: WilShi <wilson@example.com>
+        Description: AI-based high-performance generation engine for documentation
+         DeepWiki-RS is a Rust-based tool that intelligently analyzes project structures,
+         identifies core modules, and generates professional architecture documentation.
+        
+        Package: deepwiki-rs-arm64
+        Version: ${{ github.ref_name }}
+        Section: utils
+        Priority: optional
+        Architecture: arm64
+        Maintainer: WilShi <wilson@example.com>
+        Description: AI-based high-performance generation engine for documentation (ARM64)
+         DeepWiki-RS is a Rust-based tool that intelligently analyzes project structures,
+         identifies core modules, and generates professional architecture documentation.
+        EOF
+        
+        # Create postinst script
+        cat > debian/postinst << 'EOF'
+        #!/bin/sh
+        set -e
+        echo "DeepWiki-RS has been installed successfully!"
+        echo "Run 'deepwiki-rs --help' for usage instructions."
+        EOF
+        
+        # Create prerm script
+        cat > debian/prerm << 'EOF'
+        #!/bin/sh
+        set -e
+        echo "Removing DeepWiki-RS..."
+        rm -f /usr/local/bin/deepwiki-rs
+        echo "DeepWiki-RS has been removed."
+        EOF
+        
+        chmod +x debian/postinst debian/prerm
+        
+        # Build package
+        dpkg-deb --build debian
+        
+    - name: Upload packages
+      uses: actions/upload-artifact@v4
+      with:
+        name: deepwiki-rs-deb-packages
+        path: debian/*.deb

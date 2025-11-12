@@ -1,13 +1,19 @@
-name: Build Windows Binary
+name: Build Windows Binaries
 
 on:
   push:
     tags:
       - 'v*'
   workflow_dispatch:
+    inputs:
+      build_arm64:
+        description: 'Build ARM64 version'
+        required: false
+        default: false
 
 jobs:
-  build:
+  build-windows-x64:
+    name: Windows x64
     runs-on: windows-latest
     
     steps:
@@ -15,12 +21,146 @@ jobs:
     
     - name: Install Rust
       uses: dtolnay/rust-toolchain@stable
-      
+      with:
+        targets: x86_64-pc-windows-msvc
+    
+    - name: Cache dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          target
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+    
     - name: Build
-      run: cargo build --release
-      
+      run: cargo build --release --target x86_64-pc-windows-msvc
+    
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
-        name: deepwiki-rs-windows
-        path: target/release/deepwiki-rs.exe
+        name: deepwiki-rs-windows-x64
+        path: target/x86_64-pc-windows-msvc/release/deepwiki-rs.exe
+
+  build-windows-arm64:
+    name: Windows ARM64
+    runs-on: windows-latest
+    if: ${{ github.event.inputs.build_arm64 || startsWith(github.ref, 'refs/tags/v') }}
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        targets: aarch64-pc-windows-msvc
+    
+    - name: Cache dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          target
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+    
+    - name: Build
+      run: cargo build --release --target aarch64-pc-windows-msvc
+    
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: deepwiki-rs-windows-arm64
+        path: target/aarch64-pc-windows-msvc/release/deepwiki-rs.exe
+
+  create-installer:
+    name: Create Windows Installer
+    runs-on: windows-latest
+    needs: [build-windows-x64, build-windows-arm64]
+    if: startsWith(github.ref, 'refs/tags/v')
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Download x64 binary
+      uses: actions/download-artifact@v4
+      with:
+        name: deepwiki-rs-windows-x64
+        path: artifacts
+    
+    - name: Download ARM64 binary
+      uses: actions/download-artifact@v4
+      with:
+        name: deepwiki-rs-windows-arm64
+        path: artifacts
+      continue-on-error: true
+    
+    - name: Install makensis
+      run: |
+        choco install makensis -y
+        echo "C:\Program Files (x86)\NSIS\makensis.exe" >> $env:PATH
+    
+    - name: Create installer script
+      run: |
+        cat > installer.nsi << 'EOF'
+        !define APP_NAME "DeepWiki-RS"
+        !define APP_VERSION "${{ github.ref_name }}"
+        !define APP_EXECUTABLE "${PWD}\artifacts\deepwiki-rs-windows-x64.exe"
+        
+        !include "MUI2.nsh"
+        
+        ; Modern UI
+        !define MUI_ICON "icon.ico"
+        !define MUI_UNICON "icon.ico"
+        !define MUI_HEADERIMAGE
+        !define MUI_HEADERIMAGE_BITMAP "banner.bmp"
+        
+        Var /INSTDIR
+        
+        Section "Modern UI" MUI_UNPAGE WelcomePage
+          !insertmacro MUI_PAGE_WELCOME_TEXT
+          "欢迎使用 DeepWiki-RS 安装向导！$\r$\n\
+          DeepWiki-RS 是一个由 Rust 和 AI 驱动的项目知识库生成引擎。"
+        
+        Section "Modern UI" MUI_UNPAGE ComponentsPage
+          !insertmacro MUI_PAGE_COMPONENTS_TEXT
+          "选择要安装的组件："
+          
+        Section "Modern UI" MUI_UNPAGE DIRECTORYPAGE
+          !insertmacro MUI_PAGE_DIRECTORY_TEXT
+          "选择安装目录："
+          !insertmacro MUI_PAGE_DIRECTORY_SUBFOLDER_TEXT
+          "DeepWiki-RS 将安装在选定的目录中。"
+        
+        Section "Modern UI" MUI_UNPAGE INSTFILESPAGE
+          !insertmacro MUI_PAGE_INSTFILES_TEXT
+          "准备安装 DeepWiki-RS..."
+        
+        Section "InstallFiles" INSTDIR "$INSTDIR"
+          File "/oname=${APP_EXECUTABLE}" "$INSTDIR\${APP_NAME}.exe"
+          CreateShortCut "$DESKTOP\${APP_NAME}.lnk" "$INSTDIR\${APP_NAME}.exe"
+          CreateShortCut "$SMPROGRAMS\${APP_NAME}" "$INSTDIR\EOF
+        WriteUninstaller "$INSTDIR\Uninstall.exe"
+        
+        Section "Modern UI" MUI_UNPAGE_FINISHPAGE
+          !insertmacro MUI_PAGE_FINISH_TEXT
+          "DeepWiki-RS 安装完成！$\r$\n\
+          感谢您使用 DeepWiki-RS！"
+        
+        Section "un.$ {APP_NAME}" Uninstall
+          Delete "$INSTDIR\${APP_NAME}.exe"
+          Delete "$INSTDIR\Uninstall.exe"
+          Delete "$DESKTOP\${APP_NAME}.lnk"
+          Delete "$SMPROGRAMS\${APP_NAME}"
+          RMDir "$INSTDIR"
+        SectionEnd
+        EOF
+    
+    - name: Create installer
+      run: makensis installer.nsi
+    
+    - name: Upload installer
+      uses: actions/upload-artifact@v4
+      with:
+        name: deepwiki-rs-windows-installer
+        path: installer.exe

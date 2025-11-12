@@ -1,10 +1,14 @@
-name: Rust CI
+name: Rust CI/CD
 
 on:
   push:
     branches: [ main, develop ]
+    tags:
+      - 'v*'
   pull_request:
     branches: [ main ]
+  release:
+    types: [published]
 
 env:
   CARGO_TERM_COLOR: always
@@ -175,3 +179,39 @@ jobs:
       with:
         files: lcov.info
         fail_ci_if_error: true
+
+  release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: artifacts
+    
+    - name: Create release
+      id: create_release
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: ${{ github.ref_name }}
+        name: Release ${{ github.ref_name }}
+        draft: false
+        prerelease: false
+        files: |
+          artifacts/*
+        generate_release_notes: true
+    
+    - name: Upload release assets
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: ${{ github.ref_name }}
+        files: |
+          artifacts/deepwiki-rs-linux-amd64
+          artifacts/deepwiki-rs-windows-amd64
+          artifacts/deepwiki-rs-macos-amd64
