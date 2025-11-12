@@ -32,31 +32,28 @@ jobs:
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
       
-    - name: Log in to Docker Hub
-      uses: docker/login-action@v3
-      with:
-        username: ${{ secrets.DOCKER_USERNAME }}
-        password: ${{ secrets.DOCKER_PASSWORD }}
-    
-    - name: Extract metadata
-      id: meta
-      uses: docker/metadata-action@v5
-      with:
-        images: ${{ matrix.image_name }}
-    
-    - name: Build and push Docker image
+    - name: Build Docker image
       uses: docker/build-push-action@v5
       with:
         context: .
         file: ${{ matrix.dockerfile }}
         platforms: ${{ matrix.platform }}
-        push: true
+        push: false
+        load: true
         tags: |
-          ${{ steps.meta.outputs.tags }}
-          latest
+          ${{ matrix.image_name }}:latest
         cache-from: type=gha
         cache-to: type=gha,mode=max
-        labels: ${{ steps.meta.outputs.labels }}
+        labels: |
+          org.opencontainers.image.title: DeepWiki-RS
+          org.opencontainers.image.description: AI-based documentation generation engine
+          org.opencontainers.image.url: https://github.com/WilShi/deepwiki-rs
+          org.opencontainers.image.licenses: MIT
+    
+    - name: Test Docker image
+      run: |
+        echo "Testing Docker image ${{ matrix.image_name }}:latest"
+        docker run --rm ${{ matrix.image_name }}:latest --version
 
   build-docker-multiarch:
     name: Build Multi-Arch Docker Image
@@ -74,29 +71,19 @@ jobs:
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
     
-    - name: Log in to Docker Hub
-      uses: docker/login-action@v3
-      with:
-        username: ${{ secrets.DOCKER_USERNAME }}
-        password: ${{ secrets.DOCKER_PASSWORD }}
-    
-    - name: Build and push multi-arch image
+    - name: Build multi-arch image
       uses: docker/build-push-action@v5
       with:
         context: .
         file: ./Dockerfile
         platforms: linux/amd64,linux/arm64
-        push: true
+        push: false
         tags: |
-          ${{ github.ref_name }}
-          latest
-          multiarch
+          deepwiki-rs:multiarch
         cache-from: type=gha
         cache-to: type=gha,mode=max
         labels: |
           org.opencontainers.image.title: DeepWiki-RS
           org.opencontainers.image.description: AI-based documentation generation engine
           org.opencontainers.image.url: https://github.com/WilShi/deepwiki-rs
-          org.opencontainers.image.documentation: https://github.com/WilShi/deepwiki-rs#readme
           org.opencontainers.image.licenses: MIT
-          org.opencontainers.image.source: https://github.com/WilShi/deepwiki-rs/tree/main
