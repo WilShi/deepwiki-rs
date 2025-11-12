@@ -232,7 +232,7 @@ export { createUser, UserService };
         assert_eq!(create_user.parameters[2].is_optional, true);
         
         // Find and check class
-        if let Some(user_service) = interfaces.iter().find(|i| i.name == "UserService" && i.interface_type == "class") {
+        if let Some(_user_service) = interfaces.iter().find(|i| i.name == "UserService" && i.interface_type == "class") {
             // Found the class
         }
         

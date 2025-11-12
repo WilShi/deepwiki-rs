@@ -2,15 +2,18 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 /// 精简的关系分析结果
-#[derive(Debug, Serialize, Deserialize, Clone, JsonSchema)]
+#[derive(Debug, Serialize, Deserialize, Clone, JsonSchema, Default)]
 pub struct RelationshipAnalysis {
     /// 核心依赖关系（只保留重要的）
+    #[serde(default)]
     pub core_dependencies: Vec<CoreDependency>,
 
     /// 架构层次信息
+    #[serde(default)]
     pub architecture_layers: Vec<ArchitectureLayer>,
 
     /// 关键问题和建议
+    #[serde(default)]
     pub key_insights: Vec<String>,
 }
 

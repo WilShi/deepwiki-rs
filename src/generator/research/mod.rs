@@ -19,6 +19,11 @@ pub mod memory;
 
 /// 执行研究阶段
 pub async fn execute(context: &GeneratorContext) -> Result<()> {
+    if context.config.llm.disable_preset_tools {
+        println!("   ⚠️ LLM已禁用，跳过研究阶段");
+        return Ok(());
+    }
+    
     let orchestrator = ResearchOrchestrator::default();
     orchestrator.execute_research_pipeline(context).await
 }

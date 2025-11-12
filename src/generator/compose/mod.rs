@@ -15,6 +15,11 @@ pub mod types;
 
 /// 执行文档生成阶段
 pub async fn execute(context: &GeneratorContext) -> Result<()> {
+    if context.config.llm.disable_preset_tools {
+        println!("   ⚠️ LLM已禁用，跳过文档生成阶段");
+        return Ok(());
+    }
+    
     let mut doc_tree = DocTree::new(&context.config.target_language);
     let composer = DocumentationComposer::default();
     composer.execute(context, &mut doc_tree).await

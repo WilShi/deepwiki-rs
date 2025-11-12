@@ -85,19 +85,29 @@ impl Generator<PreprocessingResult> for PreProcessAgent {
 
         println!("   识别出 {} 个主要的源码文件", important_codes.len());
 
-        // 4. 使用AI分析核心组件
-        println!("🤖 使用AI分析核心文件...");
-        let code_analyze = CodeAnalyze::new();
-        let core_code_insights = code_analyze
-            .execute(&context, &important_codes, &project_structure)
-            .await?;
+        // 4. 使用AI分析核心组件（如果未禁用）
+        let core_code_insights = if config.llm.disable_preset_tools {
+            println!("   ⚠️ LLM已禁用，跳过AI分析步骤");
+            Vec::new()
+        } else {
+            println!("🤖 使用AI分析核心文件...");
+            let code_analyze = CodeAnalyze::new();
+            code_analyze
+                .execute(&context, &important_codes, &project_structure)
+                .await?
+        };
 
-        // 5. 分析组件关系
-        println!("🔗 分析组件关系...");
-        let relationships_analyze = RelationshipsAnalyze::new();
-        let relationships = relationships_analyze
-            .execute(&context, &core_code_insights, &project_structure)
-            .await?;
+        // 5. 分析组件关系（如果未禁用）
+        let relationships = if config.llm.disable_preset_tools {
+            println!("   ⚠️ LLM已禁用，跳过关系分析步骤");
+            RelationshipAnalysis::default()
+        } else {
+            println!("🔗 分析组件关系...");
+            let relationships_analyze = RelationshipsAnalyze::new();
+            relationships_analyze
+                .execute(&context, &core_code_insights, &project_structure)
+                .await?
+        };
 
         let processing_time = start_time.elapsed().as_secs_f64();
 

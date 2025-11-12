@@ -205,11 +205,10 @@ impl Config {
     /// 获取项目名称，优先使用配置的project_name，否则自动推断
     pub fn get_project_name(&self) -> String {
         // 优先使用配置的项目名称
-        if let Some(ref name) = self.project_name {
-            if !name.trim().is_empty() {
+        if let Some(ref name) = self.project_name
+            && !name.trim().is_empty() {
                 return name.clone();
             }
-        }
 
         // 如果没有配置或配置为空，则自动推断
         self.infer_project_name()
@@ -276,14 +275,13 @@ impl Config {
                         in_package_section = false;
                         continue;
                     }
-                    if in_package_section && line.starts_with("name") && line.contains("=") {
-                        if let Some(name_part) = line.split('=').nth(1) {
+                    if in_package_section && line.starts_with("name") && line.contains("=")
+                        && let Some(name_part) = line.split('=').nth(1) {
                             let name = name_part.trim().trim_matches('"').trim_matches('\'');
                             if !name.is_empty() {
                                 return Some(name.to_string());
                             }
                         }
-                    }
                 }
             }
             Err(_) => return None,
