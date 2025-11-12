@@ -22,9 +22,6 @@ jobs:
           - platform: linux/arm64
             image_name: deepwiki-rs-arm64
             dockerfile: ./Dockerfile.arm64
-          - platform: windows/amd64
-            image_name: deepwiki-rs-windows
-            dockerfile: ./Dockerfile.windows
     
     steps:
     - uses: actions/checkout@v4
