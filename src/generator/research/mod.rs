@@ -8,7 +8,17 @@
 // E（微观，C3）：KeyModulesInsight 每个模块的详细技术方案 = 关联的E + 关联的code_insights
 // F（微观，C3、C4）：BoundariesInsight 按照关注的Purpose分类，提取对应代码属于边界类型的代码的说明。
 
+use anyhow::Result;
+use crate::generator::context::GeneratorContext;
+use crate::generator::research::orchestrator::ResearchOrchestrator;
+
 pub mod agents;
 pub mod orchestrator;
 pub mod types;
 pub mod memory;
+
+/// 执行研究阶段
+pub async fn execute(context: &GeneratorContext) -> Result<()> {
+    let orchestrator = ResearchOrchestrator::default();
+    orchestrator.execute_research_pipeline(context).await
+}

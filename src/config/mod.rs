@@ -8,8 +8,10 @@ use crate::i18n::TargetLanguage;
 
 /// LLM Provider类型
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
+#[derive(Default)]
 pub enum LLMProvider {
     #[serde(rename = "openai")]
+    #[default]
     OpenAI,
     #[serde(rename = "moonshot")]
     Moonshot,
@@ -25,12 +27,6 @@ pub enum LLMProvider {
     Gemini,
     #[serde(rename = "ollama")]
     Ollama
-}
-
-impl Default for LLMProvider {
-    fn default() -> Self {
-        Self::OpenAI
-    }
 }
 
 impl std::fmt::Display for LLMProvider {
@@ -125,6 +121,21 @@ pub struct Config {
 
     /// 架构元描述文件路径
     pub architecture_meta_path: Option<PathBuf>,
+
+    /// 强制重新生成（清除缓存）
+    pub force_regenerate: bool,
+
+    /// 跳过项目预处理
+    pub skip_preprocessing: bool,
+
+    /// 跳过调研文档生成
+    pub skip_research: bool,
+
+    /// 跳过最终文档生成
+    pub skip_documentation: bool,
+
+    /// 是否启用详细日志
+    pub verbose: bool,
 }
 
 /// LLM模型配置
@@ -343,8 +354,7 @@ impl Config {
                     }
                     if (in_project_section || in_poetry_section)
                         && line.starts_with("name")
-                        && line.contains("=")
-                    {
+                        && line.contains("=") {
                         if let Some(name_part) = line.split('=').nth(1) {
                             let name = name_part.trim().trim_matches('"').trim_matches('\'');
                             if !name.is_empty() {
@@ -466,6 +476,11 @@ impl Default for Config {
             architecture_meta_path: None,
             llm: LLMConfig::default(),
             cache: CacheConfig::default(),
+            force_regenerate: false,
+            skip_preprocessing: false,
+            skip_research: false,
+            skip_documentation: false,
+            verbose: false,
         }
     }
 }
@@ -498,3 +513,7 @@ impl Default for CacheConfig {
         }
     }
 }
+
+// Include tests
+#[cfg(test)]
+mod tests;

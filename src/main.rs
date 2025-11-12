@@ -15,7 +15,7 @@ mod utils;
 #[tokio::main]
 async fn main() -> Result<()> {
     let args = cli::Args::parse();
-    let config = args.to_config();
+    let config = args.into_config();
 
     launch(&config).await
 }

@@ -51,6 +51,49 @@ pub struct InterfaceInfo {
     pub parameters: Vec<ParameterInfo>,
     pub return_type: Option<String>,
     pub description: Option<String>,
+
+    // 🆕 新增字段 - 用于更精确的代码定位和详细信息
+    /// 定义所在文件路径
+    #[serde(default)]
+    pub file_path: Option<String>,
+    /// 定义所在行号
+    #[serde(default)]
+    pub line_number: Option<usize>,
+    /// 结构体字段（如果是 struct）
+    #[serde(default)]
+    pub fields: Vec<FieldInfo>,
+    /// 枚举变体（如果是 enum）
+    #[serde(default)]
+    pub variants: Vec<VariantInfo>,
+    /// 原始代码片段
+    #[serde(default)]
+    pub source_code: Option<String>,
+}
+
+impl InterfaceInfo {
+    /// 创建基础接口信息（为向后兼容提供便利构造函数）
+    pub fn new(
+        name: String,
+        interface_type: String,
+        visibility: String,
+        parameters: Vec<ParameterInfo>,
+        return_type: Option<String>,
+        description: Option<String>,
+    ) -> Self {
+        Self {
+            name,
+            interface_type,
+            visibility,
+            parameters,
+            return_type,
+            description,
+            file_path: None,
+            line_number: None,
+            fields: Vec::new(),
+            variants: Vec::new(),
+            source_code: None,
+        }
+    }
 }
 
 /// 参数信息
@@ -59,6 +102,28 @@ pub struct ParameterInfo {
     pub name: String,
     pub param_type: String,
     pub is_optional: bool,
+    pub description: Option<String>,
+}
+
+/// 字段信息
+#[derive(Debug, Serialize, Deserialize, Clone, JsonSchema)]
+pub struct FieldInfo {
+    pub name: String,
+    pub field_type: String,
+    pub visibility: String,
+    pub description: Option<String>,
+    pub is_optional: bool,
+    #[serde(default)]
+    pub default_value: Option<String>,
+}
+
+/// 枚举变体信息
+#[derive(Debug, Serialize, Deserialize, Clone, JsonSchema)]
+pub struct VariantInfo {
+    pub name: String,
+    /// 变体的字段（如果有）
+    #[serde(default)]
+    pub fields: Vec<FieldInfo>,
     pub description: Option<String>,
 }
 
@@ -316,5 +381,178 @@ impl CodePurposeMapper {
         }
 
         CodePurpose::Other
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json;
+
+    #[test]
+    fn test_interface_info_new_constructor() {
+        let info = InterfaceInfo::new(
+            "TestStruct".to_string(),
+            "struct".to_string(),
+            "public".to_string(),
+            vec![],
+            None,
+            Some("Test description".to_string()),
+        );
+
+        assert_eq!(info.name, "TestStruct");
+        assert_eq!(info.interface_type, "struct");
+        assert_eq!(info.visibility, "public");
+        assert_eq!(info.file_path, None); // 默认值
+        assert_eq!(info.line_number, None);
+        assert_eq!(info.fields.len(), 0);
+        assert_eq!(info.variants.len(), 0);
+        assert_eq!(info.source_code, None);
+    }
+
+    #[test]
+    fn test_backward_compatibility_deserialize_old_format() {
+        // 验证旧版本的 JSON 数据能正常加载
+        let old_json = r#"{
+            "name": "User",
+            "interface_type": "struct",
+            "visibility": "public",
+            "parameters": [],
+            "return_type": null,
+            "description": "User struct"
+        }"#;
+
+        // 应该能成功反序列化，缺失的字段使用默认值
+        let result: Result<InterfaceInfo, _> = serde_json::from_str(old_json);
+        assert!(result.is_ok(), "Failed to deserialize old format JSON");
+
+        let info = result.unwrap();
+        assert_eq!(info.name, "User");
+        assert_eq!(info.interface_type, "struct");
+        assert_eq!(info.file_path, None); // 默认值
+        assert_eq!(info.fields.len(), 0); // 默认值
+        assert_eq!(info.variants.len(), 0);
+    }
+
+    #[test]
+    fn test_new_format_serialize_deserialize() {
+        // 测试新格式的完整序列化/反序列化
+        let field = FieldInfo {
+            name: "id".to_string(),
+            field_type: "i64".to_string(),
+            visibility: "public".to_string(),
+            description: Some("User ID".to_string()),
+            is_optional: false,
+            default_value: None,
+        };
+
+        let mut info = InterfaceInfo::new(
+            "User".to_string(),
+            "struct".to_string(),
+            "public".to_string(),
+            vec![],
+            None,
+            Some("User model".to_string()),
+        );
+        info.file_path = Some("src/models/user.rs".to_string());
+        info.line_number = Some(15);
+        info.fields = vec![field];
+
+        // 序列化
+        let json = serde_json::to_string(&info).unwrap();
+
+        // 反序列化
+        let deserialized: InterfaceInfo = serde_json::from_str(&json).unwrap();
+
+        assert_eq!(deserialized.name, "User");
+        assert_eq!(deserialized.file_path, Some("src/models/user.rs".to_string()));
+        assert_eq!(deserialized.line_number, Some(15));
+        assert_eq!(deserialized.fields.len(), 1);
+        assert_eq!(deserialized.fields[0].name, "id");
+        assert_eq!(deserialized.fields[0].field_type, "i64");
+    }
+
+    #[test]
+    fn test_field_info_complete() {
+        let field = FieldInfo {
+            name: "email".to_string(),
+            field_type: "Option<String>".to_string(),
+            visibility: "public".to_string(),
+            description: Some("Email address".to_string()),
+            is_optional: true,
+            default_value: Some("None".to_string()),
+        };
+
+        assert_eq!(field.name, "email");
+        assert_eq!(field.field_type, "Option<String>");
+        assert_eq!(field.is_optional, true);
+        assert_eq!(field.default_value, Some("None".to_string()));
+    }
+
+    #[test]
+    fn test_variant_info() {
+        let field = FieldInfo {
+            name: "permissions".to_string(),
+            field_type: "Vec<String>".to_string(),
+            visibility: "public".to_string(),
+            description: None,
+            is_optional: false,
+            default_value: None,
+        };
+
+        let variant = VariantInfo {
+            name: "Admin".to_string(),
+            fields: vec![field],
+            description: Some("Administrator role".to_string()),
+        };
+
+        assert_eq!(variant.name, "Admin");
+        assert_eq!(variant.fields.len(), 1);
+        assert_eq!(variant.fields[0].name, "permissions");
+        assert_eq!(variant.description, Some("Administrator role".to_string()));
+    }
+
+    #[test]
+    fn test_parameter_info() {
+        let param = ParameterInfo {
+            name: "username".to_string(),
+            param_type: "String".to_string(),
+            is_optional: false,
+            description: Some("User's username".to_string()),
+        };
+
+        assert_eq!(param.name, "username");
+        assert_eq!(param.param_type, "String");
+        assert_eq!(param.is_optional, false);
+    }
+
+    #[test]
+    fn test_interface_info_with_parameters() {
+        let param1 = ParameterInfo {
+            name: "id".to_string(),
+            param_type: "i64".to_string(),
+            is_optional: false,
+            description: None,
+        };
+
+        let param2 = ParameterInfo {
+            name: "username".to_string(),
+            param_type: "String".to_string(),
+            is_optional: false,
+            description: None,
+        };
+
+        let info = InterfaceInfo::new(
+            "get_user".to_string(),
+            "function".to_string(),
+            "public".to_string(),
+            vec![param1, param2],
+            Some("Result<User>".to_string()),
+            Some("Get user by ID and username".to_string()),
+        );
+
+        assert_eq!(info.name, "get_user");
+        assert_eq!(info.parameters.len(), 2);
+        assert_eq!(info.return_type, Some("Result<User>".to_string()));
     }
 }

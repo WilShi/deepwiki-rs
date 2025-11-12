@@ -201,14 +201,14 @@ impl LanguageProcessor for KotlinProcessor {
                         "function"
                     };
 
-                    interfaces.push(InterfaceInfo {
-                        name: func_name,
-                        interface_type: interface_type.to_string(),
+                    interfaces.push(InterfaceInfo::new(
+                        func_name,
+                        interface_type.to_string(),
                         visibility,
-                        parameters: Vec::new(),
-                        return_type: self.extract_kotlin_return_type(trimmed),
-                        description: self.extract_kotlin_comment(&lines, i),
-                    });
+                        Vec::new(),
+                        self.extract_kotlin_return_type(trimmed),
+                        self.extract_kotlin_comment(&lines, i),
+                    ));
                 }
             }
 
@@ -226,14 +226,14 @@ impl LanguageProcessor for KotlinProcessor {
                         "class"
                     };
 
-                    interfaces.push(InterfaceInfo {
-                        name: class_name,
-                        interface_type: interface_type.to_string(),
+                    interfaces.push(InterfaceInfo::new(
+                        class_name,
+                        interface_type.to_string(),
                         visibility,
-                        parameters: Vec::new(),
-                        return_type: None,
-                        description: self.extract_kotlin_comment(&lines, i),
-                    });
+                        Vec::new(),
+                        None,
+                        self.extract_kotlin_comment(&lines, i),
+                    ));
                 }
             }
 
@@ -242,14 +242,14 @@ impl LanguageProcessor for KotlinProcessor {
                 if let Some(interface_name) = self.extract_kotlin_interface(trimmed) {
                     let visibility = self.extract_kotlin_visibility(trimmed);
 
-                    interfaces.push(InterfaceInfo {
-                        name: interface_name,
-                        interface_type: "interface".to_string(),
+                    interfaces.push(InterfaceInfo::new(
+                        interface_name,
+                        "interface".to_string(),
                         visibility,
-                        parameters: Vec::new(),
-                        return_type: None,
-                        description: self.extract_kotlin_comment(&lines, i),
-                    });
+                        Vec::new(),
+                        None,
+                        self.extract_kotlin_comment(&lines, i),
+                    ));
                 }
             }
 
@@ -258,14 +258,14 @@ impl LanguageProcessor for KotlinProcessor {
                 if let Some(object_name) = self.extract_kotlin_object(trimmed) {
                     let visibility = self.extract_kotlin_visibility(trimmed);
 
-                    interfaces.push(InterfaceInfo {
-                        name: object_name,
-                        interface_type: "object".to_string(),
+                    interfaces.push(InterfaceInfo::new(
+                        object_name,
+                        "object".to_string(),
                         visibility,
-                        parameters: Vec::new(),
-                        return_type: None,
-                        description: self.extract_kotlin_comment(&lines, i),
-                    });
+                        Vec::new(),
+                        None,
+                        self.extract_kotlin_comment(&lines, i),
+                    ));
                 }
             }
         }

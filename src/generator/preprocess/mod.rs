@@ -46,6 +46,13 @@ impl PreProcessAgent {
     }
 }
 
+/// 执行预处理
+pub async fn execute(context: &GeneratorContext) -> Result<()> {
+    let agent = PreProcessAgent::new();
+    agent.execute(context.clone()).await?;
+    Ok(())
+}
+
 impl Generator<PreprocessingResult> for PreProcessAgent {
     async fn execute(&self, context: GeneratorContext) -> Result<PreprocessingResult> {
         let start_time = Instant::now();

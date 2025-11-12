@@ -1,5 +1,5 @@
 use super::{Dependency, LanguageProcessor};
-use crate::types::code::{InterfaceInfo, ParameterInfo};
+use crate::types::code::{InterfaceInfo, ParameterInfo, FieldInfo};
 use regex::Regex;
 use std::path::Path;
 
@@ -148,9 +148,10 @@ impl LanguageProcessor for TypeScriptProcessor {
         "TypeScript"
     }
 
-    fn extract_interfaces(&self, content: &str, _file_path: &Path) -> Vec<InterfaceInfo> {
+    fn extract_interfaces(&self, content: &str, file_path: &Path) -> Vec<InterfaceInfo> {
         let mut interfaces = Vec::new();
         let lines: Vec<&str> = content.lines().collect();
+        let file_path_str = file_path.to_string_lossy().to_string();
         
         for (i, line) in lines.iter().enumerate() {
             // 提取函数定义
@@ -160,19 +161,25 @@ impl LanguageProcessor for TypeScriptProcessor {
                 let name = captures.get(3).map(|m| m.as_str()).unwrap_or("").to_string();
                 let params_str = captures.get(4).map(|m| m.as_str()).unwrap_or("");
                 let return_type = captures.get(5).map(|m| m.as_str().trim().to_string());
-                
+
                 let parameters = self.parse_typescript_parameters(params_str);
                 let visibility = if is_exported { "public" } else { "private" };
                 let interface_type = if is_async { "async_function" } else { "function" };
-                
-                interfaces.push(InterfaceInfo {
+
+                let mut interface = InterfaceInfo::new(
                     name,
-                    interface_type: interface_type.to_string(),
-                    visibility: visibility.to_string(),
+                    interface_type.to_string(),
+                    visibility.to_string(),
                     parameters,
                     return_type,
-                    description: self.extract_jsdoc_comment(&lines, i),
-                });
+                    self.extract_jsdoc_comment(&lines, i),
+                );
+                
+                // 设置文件路径和行号
+                interface.file_path = Some(file_path_str.clone());
+                interface.line_number = Some(i + 1);
+                
+                interfaces.push(interface);
             }
             
             // 提取接口定义
@@ -180,15 +187,25 @@ impl LanguageProcessor for TypeScriptProcessor {
                 let is_exported = captures.get(1).is_some();
                 let name = captures.get(2).map(|m| m.as_str()).unwrap_or("").to_string();
                 let visibility = if is_exported { "public" } else { "private" };
-                
-                interfaces.push(InterfaceInfo {
+
+                // 提取接口字段
+                let fields = self.extract_interface_fields(&lines, i);
+
+                let mut interface = InterfaceInfo::new(
                     name,
-                    interface_type: "interface".to_string(),
-                    visibility: visibility.to_string(),
-                    parameters: Vec::new(),
-                    return_type: None,
-                    description: self.extract_jsdoc_comment(&lines, i),
-                });
+                    "interface".to_string(),
+                    visibility.to_string(),
+                    Vec::new(),
+                    None,
+                    self.extract_jsdoc_comment(&lines, i),
+                );
+                
+                // 设置文件路径和行号
+                interface.file_path = Some(file_path_str.clone());
+                interface.line_number = Some(i + 1);
+                interface.fields = fields;
+                
+                interfaces.push(interface);
             }
             
             // 提取类型别名
@@ -196,15 +213,15 @@ impl LanguageProcessor for TypeScriptProcessor {
                 let is_exported = captures.get(1).is_some();
                 let name = captures.get(2).map(|m| m.as_str()).unwrap_or("").to_string();
                 let visibility = if is_exported { "public" } else { "private" };
-                
-                interfaces.push(InterfaceInfo {
+
+                interfaces.push(InterfaceInfo::new(
                     name,
-                    interface_type: "type_alias".to_string(),
-                    visibility: visibility.to_string(),
-                    parameters: Vec::new(),
-                    return_type: None,
-                    description: self.extract_jsdoc_comment(&lines, i),
-                });
+                    "type_alias".to_string(),
+                    visibility.to_string(),
+                    Vec::new(),
+                    None,
+                    self.extract_jsdoc_comment(&lines, i),
+                ));
             }
             
             // 提取类定义
@@ -214,15 +231,15 @@ impl LanguageProcessor for TypeScriptProcessor {
                 let name = captures.get(3).map(|m| m.as_str()).unwrap_or("").to_string();
                 let visibility = if is_exported { "public" } else { "private" };
                 let interface_type = if is_abstract { "abstract_class" } else { "class" };
-                
-                interfaces.push(InterfaceInfo {
+
+                interfaces.push(InterfaceInfo::new(
                     name,
-                    interface_type: interface_type.to_string(),
-                    visibility: visibility.to_string(),
-                    parameters: Vec::new(),
-                    return_type: None,
-                    description: self.extract_jsdoc_comment(&lines, i),
-                });
+                    interface_type.to_string(),
+                    visibility.to_string(),
+                    Vec::new(),
+                    None,
+                    self.extract_jsdoc_comment(&lines, i),
+                ));
             }
             
             // 提取枚举定义
@@ -230,15 +247,15 @@ impl LanguageProcessor for TypeScriptProcessor {
                 let is_exported = captures.get(1).is_some();
                 let name = captures.get(2).map(|m| m.as_str()).unwrap_or("").to_string();
                 let visibility = if is_exported { "public" } else { "private" };
-                
-                interfaces.push(InterfaceInfo {
+
+                interfaces.push(InterfaceInfo::new(
                     name,
-                    interface_type: "enum".to_string(),
-                    visibility: visibility.to_string(),
-                    parameters: Vec::new(),
-                    return_type: None,
-                    description: self.extract_jsdoc_comment(&lines, i),
-                });
+                    "enum".to_string(),
+                    visibility.to_string(),
+                    Vec::new(),
+                    None,
+                    self.extract_jsdoc_comment(&lines, i),
+                ));
             }
             
             // 提取方法定义（类内部）
@@ -249,21 +266,27 @@ impl LanguageProcessor for TypeScriptProcessor {
                 let name = captures.get(4).map(|m| m.as_str()).unwrap_or("").to_string();
                 let params_str = captures.get(5).map(|m| m.as_str()).unwrap_or("");
                 let return_type = captures.get(6).map(|m| m.as_str().trim().to_string());
-                
+
                 let parameters = self.parse_typescript_parameters(params_str);
                 let mut interface_type = if is_async { "async_method" } else { "method" };
                 if is_static {
                     interface_type = if is_async { "static_async_method" } else { "static_method" };
                 }
-                
-                interfaces.push(InterfaceInfo {
+
+                let mut interface = InterfaceInfo::new(
                     name,
-                    interface_type: interface_type.to_string(),
-                    visibility: visibility.to_string(),
+                    interface_type.to_string(),
+                    visibility.to_string(),
                     parameters,
                     return_type,
-                    description: self.extract_jsdoc_comment(&lines, i),
-                });
+                    self.extract_jsdoc_comment(&lines, i),
+                );
+                
+                // 设置文件路径和行号
+                interface.file_path = Some(file_path_str.clone());
+                interface.line_number = Some(i + 1);
+                
+                interfaces.push(interface);
             }
         }
         
@@ -272,6 +295,91 @@ impl LanguageProcessor for TypeScriptProcessor {
 }
 
 impl TypeScriptProcessor {
+    /// 提取接口字段
+    fn extract_interface_fields(&self, lines: &[&str], start_line: usize) -> Vec<FieldInfo> {
+        let mut fields = Vec::new();
+        let mut brace_depth = 0;
+        let mut in_interface = false;
+        
+        // 找到接口体的开始
+        for (_i, &line) in lines.iter().enumerate().skip(start_line) {
+            let trimmed = line.trim();
+            
+            if trimmed.contains('{') {
+                brace_depth += trimmed.matches('{').count() as i32;
+                if brace_depth > 0 && !in_interface {
+                    in_interface = true;
+                    continue;
+                }
+            }
+            
+            if in_interface {
+                if trimmed.contains('}') {
+                    brace_depth -= trimmed.matches('}').count() as i32;
+                    if brace_depth <= 0 {
+                        break;
+                    }
+                }
+                
+                // 解析字段: name: type; 或 name?: type;
+                if let Some(field_info) = self.parse_interface_field(trimmed) {
+                    fields.push(field_info);
+                }
+            }
+        }
+        
+        fields
+    }
+    
+    /// 解析单个接口字段
+    fn parse_interface_field(&self, line: &str) -> Option<FieldInfo> {
+        // 跳过空行和注释
+        if line.is_empty() || line.starts_with("//") || line.starts_with("/*") || line.starts_with("*") {
+            return None;
+        }
+        
+        // 移除行尾注释
+        let line = if let Some(pos) = line.find("//") {
+            &line[..pos]
+        } else {
+            line
+        }.trim();
+        
+        // 移除分号
+        let line = line.trim_end_matches(';').trim();
+        
+        // 解析字段格式
+        let parts: Vec<&str> = line.split(':').collect();
+        if parts.len() != 2 {
+            return None;
+        }
+        
+        let name_part = parts[0].trim();
+        let type_part = parts[1].trim();
+        
+        // 检查是否是可选属性
+        let is_optional = name_part.ends_with('?');
+        let name = if is_optional {
+            &name_part[..name_part.len() - 1]
+        } else {
+            name_part
+        };
+        
+        // 跳过方法定义
+        if type_part.contains('(') {
+            return None;
+        }
+        
+        Some(FieldInfo {
+            name: name.to_string(),
+            field_type: type_part.to_string(),
+            visibility: "public".to_string(),
+            description: None,
+            is_optional,
+            default_value: None,
+        })
+    }
+    
     /// 解析TypeScript函数参数
     fn parse_typescript_parameters(&self, params_str: &str) -> Vec<ParameterInfo> {
         let mut parameters = Vec::new();

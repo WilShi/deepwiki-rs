@@ -178,14 +178,14 @@ impl LanguageProcessor for SvelteProcessor {
         let mut interfaces = Vec::new();
 
         // Svelte组件的接口分析
-        interfaces.push(InterfaceInfo {
-            name: "SvelteComponent".to_string(),
-            interface_type: "svelte_component".to_string(),
-            visibility: "public".to_string(),
-            parameters: Vec::new(),
-            return_type: None,
-            description: Some("Svelte单文件组件".to_string()),
-        });
+        interfaces.push(InterfaceInfo::new(
+            "SvelteComponent".to_string(),
+            "svelte_component".to_string(),
+            "public".to_string(),
+            Vec::new(),
+            None,
+            Some("Svelte单文件组件".to_string()),
+        ));
 
         // 提取script标签中的函数
         if content.contains("<script") {
@@ -196,27 +196,27 @@ impl LanguageProcessor for SvelteProcessor {
                 // 提取函数定义
                 if trimmed.starts_with("function ") || trimmed.contains("= function") {
                     if let Some(func_name) = self.extract_svelte_function(trimmed) {
-                        interfaces.push(InterfaceInfo {
-                            name: func_name,
-                            interface_type: "svelte_function".to_string(),
-                            visibility: "public".to_string(),
-                            parameters: Vec::new(),
-                            return_type: None,
-                            description: None,
-                        });
+                        interfaces.push(InterfaceInfo::new(
+                            func_name,
+                            "svelte_function".to_string(),
+                            "public".to_string(),
+                            Vec::new(),
+                            None,
+                            None,
+                        ));
                     }
                 }
 
                 // 提取响应式声明
                 if trimmed.starts_with("$:") {
-                    interfaces.push(InterfaceInfo {
-                        name: "reactive_statement".to_string(),
-                        interface_type: "svelte_reactive".to_string(),
-                        visibility: "public".to_string(),
-                        parameters: Vec::new(),
-                        return_type: None,
-                        description: Some("Svelte响应式声明".to_string()),
-                    });
+                    interfaces.push(InterfaceInfo::new(
+                        "reactive_statement".to_string(),
+                        "svelte_reactive".to_string(),
+                        "public".to_string(),
+                        Vec::new(),
+                        None,
+                        Some("Svelte响应式声明".to_string()),
+                    ));
                 }
             }
         }

@@ -163,38 +163,38 @@ impl LanguageProcessor for ReactProcessor {
 
             // 提取函数组件定义
             if let Some(component_name) = self.extract_function_component(trimmed) {
-                interfaces.push(InterfaceInfo {
-                    name: component_name,
-                    interface_type: "react_component".to_string(),
-                    visibility: "public".to_string(),
-                    parameters: Vec::new(),
-                    return_type: Some("JSX.Element".to_string()),
-                    description: self.extract_component_comment(&lines, i),
-                });
+                interfaces.push(InterfaceInfo::new(
+                    component_name,
+                    "react_component".to_string(),
+                    "public".to_string(),
+                    Vec::new(),
+                    Some("JSX.Element".to_string()),
+                    self.extract_component_comment(&lines, i),
+                ));
             }
 
             // 提取类组件定义
             if let Some(component_name) = self.extract_class_component(trimmed) {
-                interfaces.push(InterfaceInfo {
-                    name: component_name,
-                    interface_type: "react_class_component".to_string(),
-                    visibility: "public".to_string(),
-                    parameters: Vec::new(),
-                    return_type: Some("JSX.Element".to_string()),
-                    description: self.extract_component_comment(&lines, i),
-                });
+                interfaces.push(InterfaceInfo::new(
+                    component_name,
+                    "react_class_component".to_string(),
+                    "public".to_string(),
+                    Vec::new(),
+                    Some("JSX.Element".to_string()),
+                    self.extract_component_comment(&lines, i),
+                ));
             }
 
             // 提取自定义Hook定义
             if let Some(hook_name) = self.extract_custom_hook(trimmed) {
-                interfaces.push(InterfaceInfo {
-                    name: hook_name,
-                    interface_type: "react_hook".to_string(),
-                    visibility: "public".to_string(),
-                    parameters: Vec::new(),
-                    return_type: None,
-                    description: self.extract_component_comment(&lines, i),
-                });
+                interfaces.push(InterfaceInfo::new(
+                    hook_name,
+                    "react_hook".to_string(),
+                    "public".to_string(),
+                    Vec::new(),
+                    None,
+                    self.extract_component_comment(&lines, i),
+                ));
             }
         }
 
@@ -211,7 +211,7 @@ impl ReactProcessor {
                 let after_function = &line[start + 8..].trim();
                 if let Some(space_pos) = after_function.find(' ') {
                     let name = after_function[..space_pos].trim();
-                    if name.chars().next().map_or(false, |c| c.is_uppercase()) {
+                    if name.chars().next().is_some_and(|c| c.is_uppercase()) {
                         return Some(name.to_string());
                     }
                 }
@@ -224,7 +224,7 @@ impl ReactProcessor {
                 let before_eq = &line[..eq_pos];
                 if let Some(name_start) = before_eq.rfind(' ') {
                     let name = before_eq[name_start + 1..].trim().trim_end_matches(':');
-                    if name.chars().next().map_or(false, |c| c.is_uppercase()) {
+                    if name.chars().next().is_some_and(|c| c.is_uppercase()) {
                         return Some(name.to_string());
                     }
                 }
@@ -237,13 +237,12 @@ impl ReactProcessor {
     /// 提取类组件名称
     fn extract_class_component(&self, line: &str) -> Option<String> {
         if line.contains("class")
-            && (line.contains("extends React.Component") || line.contains("extends Component"))
-        {
+            && (line.contains("extends React.Component") || line.contains("extends Component")) {
             if let Some(class_pos) = line.find("class") {
                 let after_class = &line[class_pos + 5..].trim();
                 if let Some(space_pos) = after_class.find(' ') {
                     let name = after_class[..space_pos].trim();
-                    if name.chars().next().map_or(false, |c| c.is_uppercase()) {
+                    if name.chars().next().is_some_and(|c| c.is_uppercase()) {
                         return Some(name.to_string());
                     }
                 }

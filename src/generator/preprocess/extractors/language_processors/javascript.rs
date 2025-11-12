@@ -168,36 +168,36 @@ impl LanguageProcessor for JavaScriptProcessor {
                 let is_async = captures.get(1).is_some();
                 let name = captures.get(2).map(|m| m.as_str()).unwrap_or("").to_string();
                 let params_str = captures.get(3).map(|m| m.as_str()).unwrap_or("");
-                
+
                 let parameters = self.parse_javascript_parameters(params_str);
                 let interface_type = if is_async { "async_function" } else { "function" };
-                
-                interfaces.push(InterfaceInfo {
+
+                interfaces.push(InterfaceInfo::new(
                     name,
-                    interface_type: interface_type.to_string(),
-                    visibility: "public".to_string(),
+                    interface_type.to_string(),
+                    "public".to_string(),
                     parameters,
-                    return_type: None,
-                    description: self.extract_jsdoc_comment(&lines, i),
-                });
+                    None,
+                    self.extract_jsdoc_comment(&lines, i),
+                ));
             }
             // 提取普通函数定义
             else if let Some(captures) = self.function_regex.captures(line) {
                 let is_async = captures.get(1).is_some();
                 let name = captures.get(2).map(|m| m.as_str()).unwrap_or("").to_string();
                 let params_str = captures.get(3).map(|m| m.as_str()).unwrap_or("");
-                
+
                 let parameters = self.parse_javascript_parameters(params_str);
                 let interface_type = if is_async { "async_function" } else { "function" };
-                
-                interfaces.push(InterfaceInfo {
+
+                interfaces.push(InterfaceInfo::new(
                     name,
-                    interface_type: interface_type.to_string(),
-                    visibility: "private".to_string(),
+                    interface_type.to_string(),
+                    "private".to_string(),
                     parameters,
-                    return_type: None,
-                    description: self.extract_jsdoc_comment(&lines, i),
-                });
+                    None,
+                    self.extract_jsdoc_comment(&lines, i),
+                ));
             }
             
             // 提取箭头函数定义
@@ -206,32 +206,32 @@ impl LanguageProcessor for JavaScriptProcessor {
                 let name = captures.get(2).map(|m| m.as_str()).unwrap_or("").to_string();
                 let is_async = captures.get(3).is_some();
                 let params_str = captures.get(4).map(|m| m.as_str()).unwrap_or("");
-                
+
                 let parameters = self.parse_javascript_parameters(params_str);
                 let interface_type = if is_async { "async_arrow_function" } else { "arrow_function" };
-                
-                interfaces.push(InterfaceInfo {
+
+                interfaces.push(InterfaceInfo::new(
                     name,
-                    interface_type: interface_type.to_string(),
-                    visibility: "private".to_string(),
+                    interface_type.to_string(),
+                    "private".to_string(),
                     parameters,
-                    return_type: None,
-                    description: self.extract_jsdoc_comment(&lines, i),
-                });
+                    None,
+                    self.extract_jsdoc_comment(&lines, i),
+                ));
             }
             
             // 提取类定义
             if let Some(captures) = self.class_regex.captures(line) {
                 let name = captures.get(1).map(|m| m.as_str()).unwrap_or("").to_string();
                 
-                interfaces.push(InterfaceInfo {
+                interfaces.push(InterfaceInfo::new(
                     name,
-                    interface_type: "class".to_string(),
-                    visibility: "public".to_string(),
-                    parameters: Vec::new(),
-                    return_type: None,
-                    description: self.extract_jsdoc_comment(&lines, i),
-                });
+                    "class".to_string(),
+                    "public".to_string(),
+                    Vec::new(),
+                    None,
+                    self.extract_jsdoc_comment(&lines, i),
+                ));
             }
             
             // 提取方法定义（类内部）
@@ -239,23 +239,23 @@ impl LanguageProcessor for JavaScriptProcessor {
                 let is_async = captures.get(1).is_some();
                 let name = captures.get(2).map(|m| m.as_str()).unwrap_or("").to_string();
                 let params_str = captures.get(3).map(|m| m.as_str()).unwrap_or("");
-                
+
                 // 跳过一些常见的非方法模式
                 if name == "if" || name == "for" || name == "while" || name == "switch" {
                     continue;
                 }
-                
+
                 let parameters = self.parse_javascript_parameters(params_str);
                 let interface_type = if is_async { "async_method" } else { "method" };
-                
-                interfaces.push(InterfaceInfo {
+
+                interfaces.push(InterfaceInfo::new(
                     name,
-                    interface_type: interface_type.to_string(),
-                    visibility: "public".to_string(),
+                    interface_type.to_string(),
+                    "public".to_string(),
                     parameters,
-                    return_type: None,
-                    description: self.extract_jsdoc_comment(&lines, i),
-                });
+                    None,
+                    self.extract_jsdoc_comment(&lines, i),
+                ));
             }
         }
         
@@ -356,3 +356,7 @@ impl JavaScriptProcessor {
         }
     }
 }
+
+// Include tests
+#[cfg(test)]
+mod tests;

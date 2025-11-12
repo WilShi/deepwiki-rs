@@ -173,14 +173,14 @@ impl LanguageProcessor for VueProcessor {
         if content.contains("<script") {
             // 提取Vue组件名称（从文件名或export default）
             if content.contains("export default") {
-                interfaces.push(InterfaceInfo {
-                    name: "VueComponent".to_string(),
-                    interface_type: "vue_component".to_string(),
-                    visibility: "public".to_string(),
-                    parameters: Vec::new(),
-                    return_type: None,
-                    description: Some("Vue单文件组件".to_string()),
-                });
+                interfaces.push(InterfaceInfo::new(
+                    "VueComponent".to_string(),
+                    "vue_component".to_string(),
+                    "public".to_string(),
+                    Vec::new(),
+                    None,
+                    Some("Vue单文件组件".to_string()),
+                ));
             }
 
             // 提取methods中的方法
@@ -190,14 +190,14 @@ impl LanguageProcessor for VueProcessor {
                     // 限制搜索范围
                     let trimmed = line.trim();
                     if let Some(method_name) = self.extract_vue_method(trimmed) {
-                        interfaces.push(InterfaceInfo {
-                            name: method_name,
-                            interface_type: "vue_method".to_string(),
-                            visibility: "public".to_string(),
-                            parameters: Vec::new(),
-                            return_type: None,
-                            description: None,
-                        });
+                        interfaces.push(InterfaceInfo::new(
+                            method_name,
+                            "vue_method".to_string(),
+                            "public".to_string(),
+                            Vec::new(),
+                            None,
+                            None,
+                        ));
                     }
                 }
             }

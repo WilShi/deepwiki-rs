@@ -95,12 +95,12 @@ pub struct Args {
 
 impl Args {
     /// 将CLI参数转换为配置
-    pub fn to_config(self) -> Config {
+    pub fn into_config(self) -> Config {
         let mut config = if let Some(config_path) = &self.config {
             // 如果显式指定了配置文件路径，从该路径加载
-            return Config::from_file(config_path).expect(
-                format!("⚠️ 警告: 无法读取配置文件 {:?}，使用默认配置", config_path).as_str(),
-            );
+            return Config::from_file(config_path).unwrap_or_else(|_| {
+                panic!("⚠️ 警告: 无法读取配置文件 {:?}，使用默认配置", config_path)
+            });
         } else {
             // 如果没有显式指定配置文件，尝试从默认位置加载
             let default_config_path = std::env::current_dir()
@@ -108,13 +108,12 @@ impl Args {
                 .join("litho.toml");
 
             if default_config_path.exists() {
-                return Config::from_file(&default_config_path).expect(
-                    format!(
+                return Config::from_file(&default_config_path).unwrap_or_else(|_| {
+                    panic!(
                         "⚠️ 警告: 无法读取默认配置文件 {:?}，使用默认配置",
                         default_config_path
                     )
-                    .as_str(),
-                );
+                });
             } else {
                 // 默认配置文件不存在，使用默认值
                 Config::default()
@@ -184,6 +183,17 @@ impl Args {
             config.cache.enabled = false;
         }
 
+        // 其他配置
+        config.force_regenerate = self.force_regenerate;
+        config.skip_preprocessing = self.skip_preprocessing;
+        config.skip_research = self.skip_research;
+        config.skip_documentation = self.skip_documentation;
+        config.verbose = self.verbose;
+
         config
     }
 }
+
+// Include tests
+#[cfg(test)]
+mod tests;

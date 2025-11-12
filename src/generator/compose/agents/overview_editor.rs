@@ -37,7 +37,55 @@ impl StepForwardAgent for OverviewEditor {
         PromptTemplate {
             system_prompt: r#"你是一个专业的软件架构文档编写专家，专注于生成C4架构模型SystemContext层级文档。
 
-你的任务是基于提供的系统上下文调研报告和领域模块分析结果，编写一份以`项目概述`为标题的完整、深入且详细的、易于阅读的C4 SystemContext文档。
+🎯 **核心要求**: 你生成的文档是为了帮助开发者快速理解**他们自己的项目代码**，而不是介绍一个抽象的系统。
+
+## ⚠️ 重要：必须包含代码位置引用
+
+在文档中提到任何模块、组件、类、函数时，**必须包含其在用户项目中的具体文件路径**。
+
+格式:
+- 📁 **定义位置**: `src/xxx/xxx.rs`
+- 📁 **定义位置**: `src/xxx/xxx.rs:行号`（如果有行号信息）
+
+示例:
+```markdown
+## 用户管理模块
+
+📁 **模块位置**: `src/modules/user/`
+
+该模块包含以下核心组件:
+
+### UserService
+📁 **定义位置**: `src/modules/user/service.rs:23`
+
+负责用户相关的业务逻辑，包括:
+- 用户注册: `register()` 方法 (第 45 行)
+- 用户登录: `login()` 方法 (第 67 行)
+```
+
+## 数据来源
+
+你会收到以下信息:
+1. **代码洞察 (CodeInsight)**: 包含 `file_path` 和 `line_number` 字段
+2. **领域模块分析**: 包含 `code_paths` 字段
+
+**请务必使用这些信息！**
+
+如果代码洞察中有这样的数据:
+```json
+{
+  "name": "UserService",
+  "file_path": "src/services/user_service.rs",
+  "line_number": 23,
+  "interfaces": [...]
+}
+```
+
+则在文档中写:
+```markdown
+### UserService
+📁 **定义位置**: `src/services/user_service.rs:23`
+```
 
 ## C4 SystemContext文档要求：
 1. **系统概览**：清晰描述系统的核心目标、业务价值和技术特征
@@ -48,6 +96,11 @@ impl StepForwardAgent for OverviewEditor {
 
 ## 文档结构要求：
 - 包含适当的标题层级和章节组织
+- 每个章节都应该包含:
+  1. 功能说明（做什么）
+  2. 📁 代码位置（在哪里）
+  3. 关键接口/方法（怎么用）
+  4. 相关组件（依赖关系）
 - 提供清晰的图表和可视化内容
 - 确保内容逻辑清晰、表达准确"#.to_string(),
 
@@ -107,7 +160,16 @@ impl StepForwardAgent for OverviewEditor {
 - 关键设计决策
 ```
 
-请生成一份高质量的C4 SystemContext架构文档。"#.to_string(),
+请生成一份高质量的C4 SystemContext架构文档。
+
+## 质量检查清单
+
+在输出文档前，请确认:
+- [ ] 每个提到的模块都有 📁 文件路径
+- [ ] 至少 80% 的组件/类/函数有代码位置引用
+- [ ] 所有文件路径都是相对于项目根目录的
+- [ ] 文档结构清晰，易于导航
+- [ ] 包含完整的 C4 SystemContext 所需元素"#.to_string(),
 
             llm_call_mode: LLMCallMode::Prompt,
             formatter_config: FormatterConfig::default(),

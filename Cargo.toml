@@ -41,6 +41,10 @@ walkdir = "2.5"
 # 正则表达式
 regex = "1.11"
 
+# Rust 代码解析（用于深度分析）
+syn = { version = "2.0", features = ["full", "extra-traits"] }
+quote = "1.0"
+
 # 哈希计算
 md-5 = "0.10"
 
@@ -52,3 +56,10 @@ markdown = "1.0"
 futures = "0.3"
 uuid = { version = "1.0", features = ["v4", "serde"] }
 glob = "0.3"
+
+[dev-dependencies]
+tempfile = "3.8"
+
+[[bin]]
+name = "deepwiki-rs"
+path = "src/main.rs"

@@ -1,5 +1,5 @@
 use super::{Dependency, LanguageProcessor};
-use crate::types::code::{InterfaceInfo, ParameterInfo};
+use crate::types::code::{InterfaceInfo, ParameterInfo, FieldInfo};
 use regex::Regex;
 use std::path::Path;
 
@@ -35,7 +35,7 @@ impl LanguageProcessor for JavaProcessor {
     
     fn extract_dependencies(&self, content: &str, file_path: &Path) -> Vec<Dependency> {
         let mut dependencies = Vec::new();
-        let source_file = file_path.to_string_lossy().to_string();
+        let _source_file = file_path.to_string_lossy().to_string();
         
         for (line_num, line) in content.lines().enumerate() {
             // 提取import语句
@@ -44,14 +44,14 @@ impl LanguageProcessor for JavaProcessor {
                     let import_str = import_path.as_str().trim();
                     let is_external = import_str.starts_with("java.") || 
                                     import_str.starts_with("javax.") ||
-                                    !import_str.contains(".");
+                                    import_str.contains(".");
                     
                     // 解析依赖名称
                     let dependency_name = self.extract_dependency_name(import_str);
                     
                     dependencies.push(Dependency {
                         name: dependency_name,
-                        path: Some(source_file.clone()),
+                        path: Some(import_str.to_string()),
                         is_external,
                         line_number: Some(line_num + 1),
                         dependency_type: "import".to_string(),
@@ -65,7 +65,7 @@ impl LanguageProcessor for JavaProcessor {
                 if let Some(package_name) = captures.get(1) {
                     dependencies.push(Dependency {
                         name: package_name.as_str().trim().to_string(),
-                        path: Some(source_file.clone()),
+                        path: Some(package_name.as_str().trim().to_string()),
                         is_external: false,
                         line_number: Some(line_num + 1),
                         dependency_type: "package".to_string(),
@@ -123,9 +123,10 @@ impl LanguageProcessor for JavaProcessor {
         "Java"
     }
 
-    fn extract_interfaces(&self, content: &str, _file_path: &Path) -> Vec<InterfaceInfo> {
+    fn extract_interfaces(&self, content: &str, file_path: &Path) -> Vec<InterfaceInfo> {
         let mut interfaces = Vec::new();
         let lines: Vec<&str> = content.lines().collect();
+        let file_path_str = file_path.to_string_lossy().to_string();
         
         for (i, line) in lines.iter().enumerate() {
             // 提取类定义
@@ -142,14 +143,24 @@ impl LanguageProcessor for JavaProcessor {
                     interface_type = "final_class".to_string();
                 }
                 
-                interfaces.push(InterfaceInfo {
+                // 提取类字段
+                let fields = self.extract_class_fields(&lines, i);
+
+                let mut interface = InterfaceInfo::new(
                     name,
                     interface_type,
-                    visibility: visibility.to_string(),
-                    parameters: Vec::new(),
-                    return_type: None,
-                    description: self.extract_javadoc(&lines, i),
-                });
+                    visibility.to_string(),
+                    Vec::new(),
+                    None,
+                    self.extract_javadoc(&lines, i),
+                );
+                
+                // 设置文件路径和行号
+                interface.file_path = Some(file_path_str.clone());
+                interface.line_number = Some(i + 1);
+                interface.fields = fields;
+                
+                interfaces.push(interface);
             }
             
             // 提取接口定义
@@ -157,14 +168,14 @@ impl LanguageProcessor for JavaProcessor {
                 let visibility = captures.get(1).map(|m| m.as_str()).unwrap_or("package");
                 let name = captures.get(2).map(|m| m.as_str()).unwrap_or("").to_string();
                 
-                interfaces.push(InterfaceInfo {
+                interfaces.push(InterfaceInfo::new(
                     name,
-                    interface_type: "interface".to_string(),
-                    visibility: visibility.to_string(),
-                    parameters: Vec::new(),
-                    return_type: None,
-                    description: self.extract_javadoc(&lines, i),
-                });
+                    "interface".to_string(),
+                    visibility.to_string(),
+                    Vec::new(),
+                    None,
+                    self.extract_javadoc(&lines, i),
+                ));
             }
             
             // 提取枚举定义
@@ -172,14 +183,14 @@ impl LanguageProcessor for JavaProcessor {
                 let visibility = captures.get(1).map(|m| m.as_str()).unwrap_or("package");
                 let name = captures.get(2).map(|m| m.as_str()).unwrap_or("").to_string();
                 
-                interfaces.push(InterfaceInfo {
+                interfaces.push(InterfaceInfo::new(
                     name,
-                    interface_type: "enum".to_string(),
-                    visibility: visibility.to_string(),
-                    parameters: Vec::new(),
-                    return_type: None,
-                    description: self.extract_javadoc(&lines, i),
-                });
+                    "enum".to_string(),
+                    visibility.to_string(),
+                    Vec::new(),
+                    None,
+                    self.extract_javadoc(&lines, i),
+                ));
             }
             
             // 提取方法定义
@@ -205,14 +216,14 @@ impl LanguageProcessor for JavaProcessor {
                     interface_type = "final_method".to_string();
                 }
                 
-                interfaces.push(InterfaceInfo {
+                interfaces.push(InterfaceInfo::new(
                     name,
                     interface_type,
-                    visibility: visibility.to_string(),
+                    visibility.to_string(),
                     parameters,
-                    return_type: Some(return_type),
-                    description: self.extract_javadoc(&lines, i),
-                });
+                    Some(return_type),
+                    self.extract_javadoc(&lines, i),
+                ));
             }
             
             // 提取构造函数
@@ -222,17 +233,17 @@ impl LanguageProcessor for JavaProcessor {
                 let params_str = captures.get(3).map(|m| m.as_str()).unwrap_or("");
                 
                 // 简单检查是否为构造函数（名称首字母大写）
-                if name.chars().next().map_or(false, |c| c.is_uppercase()) {
+                if name.chars().next().is_some_and(|c| c.is_uppercase()) {
                     let parameters = self.parse_java_parameters(params_str);
                     
-                    interfaces.push(InterfaceInfo {
+                    interfaces.push(InterfaceInfo::new(
                         name,
-                        interface_type: "constructor".to_string(),
-                        visibility: visibility.to_string(),
+                        "constructor".to_string(),
+                        visibility.to_string(),
                         parameters,
-                        return_type: None,
-                        description: self.extract_javadoc(&lines, i),
-                    });
+                        None,
+                        self.extract_javadoc(&lines, i),
+                    ));
                 }
             }
         }
@@ -242,6 +253,77 @@ impl LanguageProcessor for JavaProcessor {
 }
 
 impl JavaProcessor {
+    /// 提取类字段
+    fn extract_class_fields(&self, lines: &[&str], start_line: usize) -> Vec<FieldInfo> {
+        let mut fields = Vec::new();
+        let mut in_class = false;
+        let mut brace_depth = 0;
+        
+        for (_i, &line) in lines.iter().enumerate().skip(start_line) {
+            let trimmed = line.trim();
+            
+            // 跳过注释和空行
+            if trimmed.is_empty() || trimmed.starts_with("//") || trimmed.starts_with("/*") || trimmed.starts_with("*") {
+                continue;
+            }
+            
+            // 检测类体开始
+            if trimmed.ends_with('{') && !in_class {
+                in_class = true;
+                brace_depth += 1;
+                continue;
+            }
+            
+            if in_class {
+                // 跟踪大括号
+                brace_depth += trimmed.matches('{').count() as i32;
+                brace_depth -= trimmed.matches('}').count() as i32;
+                
+                if brace_depth <= 0 {
+                    break;
+                }
+                
+                // 解析字段
+                if let Some(field_info) = self.parse_class_field(trimmed) {
+                    fields.push(field_info);
+                }
+            }
+        }
+        
+        fields
+    }
+    
+    /// 解析单个类字段
+    fn parse_class_field(&self, line: &str) -> Option<FieldInfo> {
+        // 跳过方法定义
+        if line.contains('(') && line.contains(')') {
+            return None;
+        }
+        
+        // 解析字段格式: [visibility] [static] [final] Type name [= value];
+        let field_regex = Regex::new(r"^(public|private|protected)?\s*(static)?\s*(final)?\s*([\w.<>\[\]]+)\s+(\w+)(?:\s*=\s*([^;]+))?;?$").unwrap();
+        
+        if let Some(captures) = field_regex.captures(line) {
+            let visibility = captures.get(1).map(|m| m.as_str()).unwrap_or("package");
+            let _is_static = captures.get(2).is_some();
+            let _is_final = captures.get(3).is_some();
+            let field_type = captures.get(4).map(|m| m.as_str()).unwrap_or("").to_string();
+            let field_name = captures.get(5).map(|m| m.as_str()).unwrap_or("").to_string();
+            let default_value = captures.get(6).map(|m| m.as_str().trim().to_string());
+            
+            Some(FieldInfo {
+                name: field_name,
+                field_type,
+                visibility: visibility.to_string(),
+                description: None,
+                is_optional: default_value.is_some(),
+                default_value,
+            })
+        } else {
+            None
+        }
+    }
+    
     /// 解析Java方法参数
     fn parse_java_parameters(&self, params_str: &str) -> Vec<ParameterInfo> {
         let mut parameters = Vec::new();
@@ -267,11 +349,7 @@ impl JavaProcessor {
                 };
                 
                 // 处理泛型类型
-                let clean_type = if param_type.contains('<') {
-                    param_type
-                } else {
-                    param_type
-                };
+                let clean_type = param_type;
                 
                 parameters.push(ParameterInfo {
                     name,
@@ -337,10 +415,14 @@ impl JavaProcessor {
     /// 从Java导入路径中提取依赖名称
     fn extract_dependency_name(&self, import_path: &str) -> String {
         // 对于 com.example.package.ClassName，返回 ClassName
-        if let Some(class_name) = import_path.split('.').last() {
+        if let Some(class_name) = import_path.split('.').next_back() {
             class_name.to_string()
         } else {
             import_path.to_string()
         }
     }
 }
+
+// Include tests
+#[cfg(test)]
+mod tests;

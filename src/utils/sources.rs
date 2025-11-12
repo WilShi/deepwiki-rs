@@ -1,7 +1,9 @@
 use std::path::PathBuf;
 
+use std::path::Path;
+
 use crate::{
-    generator::preprocess::extractors::language_processors::LanguageProcessorManager,
+    generator::preprocess::extractors::language_processors::{LanguageProcessor, LanguageProcessorManager},
     types::code::CodeInsight,
 };
 
@@ -118,9 +120,9 @@ pub fn read_dependency_code_source(
     }
 }
 
-/// Todo: 使用LanguageProcessorManager方案
+/// 使用LanguageProcessorManager方案查找依赖文件
 fn find_dependency_file(
-    _language_processor: &LanguageProcessorManager,
+    language_processor: &LanguageProcessorManager,
     project_path: &PathBuf,
     dep_name: &str,
 ) -> Option<std::path::PathBuf> {
@@ -195,8 +197,29 @@ fn find_dependency_file(
         }
     }
 
-    // 如果直接路径查找失败，尝试递归搜索
+    // 如果直接路径查找失败，尝试使用语言处理器进行更智能的查找
+    if let Some(processor) = language_processor.get_processor(Path::new(dep_name)) {
+        // 根据语言处理器的特性进行更精确的查找
+        if let Some(found_path) = smart_find_by_language(processor, project_path, clean_name) {
+            return Some(found_path);
+        }
+    }
+
+    // 最后尝试递归搜索
     recursive_find_file(project_path, clean_name)
+}
+
+/// 根据语言处理器特性进行智能查找
+fn smart_find_by_language(
+    _processor: &dyn LanguageProcessor,
+    _project_path: &PathBuf,
+    _clean_name: &str,
+) -> Option<PathBuf> {
+    // 这里可以根据不同语言处理器的特性实现更智能的查找逻辑
+    // 例如：Rust的模块系统、Python的包结构、JavaScript的node_modules等
+    
+    // 目前返回None，让递归搜索作为兜底
+    None
 }
 
 fn recursive_find_file(project_path: &PathBuf, file_name: &str) -> Option<std::path::PathBuf> {

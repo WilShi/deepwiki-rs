@@ -20,6 +20,19 @@ pub struct GeneratorContext {
 }
 
 impl GeneratorContext {
+    /// 创建新的生成器上下文
+    pub fn new(config: Config) -> Result<Self> {
+        let llm_client = LLMClient::new(config.clone())?;
+        let cache_manager = Arc::new(RwLock::new(CacheManager::new(config.cache.clone())));
+        let memory = Arc::new(RwLock::new(Memory::new()));
+        
+        Ok(Self {
+            llm_client,
+            config,
+            cache_manager,
+            memory,
+        })
+    }
     /// 存储数据到 Memory
     pub async fn store_to_memory<T>(&self, scope: &str, key: &str, data: T) -> Result<()>
     where

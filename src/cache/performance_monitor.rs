@@ -31,10 +31,21 @@ pub struct CacheMetrics {
     pub total_input_tokens_saved: AtomicUsize,
     /// 总节省的输出token数量
     pub total_output_tokens_saved: AtomicUsize,
+    /// 分类统计数据
+    pub category_metrics: std::sync::RwLock<HashMap<String, CategoryMetrics>>,
+}
+
+/// 分类指标数据
+#[derive(Default)]
+pub struct CategoryMetrics {
+    pub hits: AtomicU64,
+    pub misses: AtomicU64,
+    pub time_saved: AtomicU64,
 }
 
 /// 缓存性能报告
 #[derive(Debug, Serialize, Deserialize)]
+#[allow(dead_code)] // 预留功能，尚未使用
 pub struct CachePerformanceReport {
     /// 缓存命中率
     pub hit_rate: f64,
@@ -64,6 +75,7 @@ pub struct CachePerformanceReport {
 
 /// 分类性能统计
 #[derive(Debug, Serialize, Deserialize)]
+#[allow(dead_code)] // 预留功能，尚未使用
 pub struct CategoryPerformanceStats {
     pub hits: u64,
     pub misses: u64,
@@ -107,6 +119,13 @@ impl CachePerformanceMonitor {
             Ordering::Relaxed,
         );
 
+        // 更新分类统计
+        if let Ok(mut category_map) = self.metrics.category_metrics.write() {
+            let category_metrics = category_map.entry(category.to_string()).or_default();
+            category_metrics.hits.fetch_add(1, Ordering::Relaxed);
+            category_metrics.time_saved.fetch_add(inference_time_saved.as_millis() as u64, Ordering::Relaxed);
+        }
+
         println!(
             "   💰 缓存命中 [{}] - 节省推理时间: {:.2}秒, 节省tokens: {}输入+{}输出, 估算节省成本: ${:.4}",
             category,
@@ -120,6 +139,13 @@ impl CachePerformanceMonitor {
     /// 记录缓存未命中
     pub fn record_cache_miss(&self, category: &str) {
         self.metrics.cache_misses.fetch_add(1, Ordering::Relaxed);
+        
+        // 更新分类统计
+        if let Ok(mut category_map) = self.metrics.category_metrics.write() {
+            let category_metrics = category_map.entry(category.to_string()).or_default();
+            category_metrics.misses.fetch_add(1, Ordering::Relaxed);
+        }
+        
         println!("   ⌛ 缓存未命中 [{}] - 需要进行AI推理", category);
     }
 
@@ -136,6 +162,7 @@ impl CachePerformanceMonitor {
     }
 
     /// 生成性能报告
+    #[allow(dead_code)] // 预留功能，尚未使用
     pub fn generate_report(&self) -> CachePerformanceReport {
         let hits = self.metrics.cache_hits.load(Ordering::Relaxed);
         let misses = self.metrics.cache_misses.load(Ordering::Relaxed);
@@ -171,6 +198,34 @@ impl CachePerformanceMonitor {
             0.0
         };
 
+        // 生成分类统计
+        let category_stats = if let Ok(category_map) = self.metrics.category_metrics.read() {
+            category_map.iter().map(|(category, metrics)| {
+                let cat_hits = metrics.hits.load(Ordering::Relaxed);
+                let cat_misses = metrics.misses.load(Ordering::Relaxed);
+                let cat_time_saved = metrics.time_saved.load(Ordering::Relaxed);
+                
+                let cat_hit_rate = if cat_hits + cat_misses > 0 {
+                    cat_hits as f64 / (cat_hits + cat_misses) as f64
+                } else {
+                    0.0
+                };
+                
+                let cat_time_saved_seconds = cat_time_saved as f64 / 1000.0;
+                let cat_cost_saved = cat_time_saved_seconds * 0.00001; // 简化的成本估算
+                
+                (category.clone(), CategoryPerformanceStats {
+                    hits: cat_hits,
+                    misses: cat_misses,
+                    hit_rate: cat_hit_rate,
+                    time_saved: cat_time_saved_seconds,
+                    cost_saved: cat_cost_saved,
+                })
+            }).collect()
+        } else {
+            HashMap::new()
+        };
+
         CachePerformanceReport {
             hit_rate,
             total_operations,
@@ -183,7 +238,7 @@ impl CachePerformanceMonitor {
             performance_improvement,
             input_tokens_saved,
             output_tokens_saved,
-            category_stats: HashMap::new(), // TODO: 实现分类统计
+            category_stats,
         }
     }
 }

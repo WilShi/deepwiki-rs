@@ -26,7 +26,7 @@ impl CodeAnalyze {
     pub async fn execute(
         &self,
         context: &GeneratorContext,
-        codes: &Vec<CodeDossier>,
+        codes: &[CodeDossier],
         project_structure: &ProjectStructure,
     ) -> Result<Vec<CodeInsight>> {
         let max_parallels = context.config.llm.max_parallels;

@@ -22,7 +22,7 @@ impl RelationshipsAnalyze {
     pub async fn execute(
         &self,
         context: &GeneratorContext,
-        code_insights: &Vec<CodeInsight>,
+        code_insights: &[CodeInsight],
         _project_structure: &ProjectStructure,
     ) -> Result<RelationshipAnalysis> {
         let agent_params = self

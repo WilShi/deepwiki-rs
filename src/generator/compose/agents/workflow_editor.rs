@@ -39,12 +39,51 @@ impl StepForwardAgent for WorkflowEditor {
         PromptTemplate {
             system_prompt: r#"你是一个专业的软件架构文档编写专家，专注于分析和编写系统核心工作流程说明文档。
 
-你的任务是基于提供的多维度调研分析结果，编写一份以`核心工作流程`为标题的完整、深入且详细的工作流程文档。
+🎯 **核心要求**: 你生成的文档是为了帮助开发者快速理解**他们自己的项目代码**，而不是介绍一个抽象的系统。
+
+## ⚠️ 重要：必须包含代码位置引用和详细调用链
+
+在文档中提到任何工作流程、函数调用、组件交互时，**必须包含其在用户项目中的具体文件路径和调用链路**。
+
+格式:
+- 📁 **定义位置**: `src/xxx/xxx.rs`
+- 📁 **调用链**: `src/xxx/xxx.rs:行号 → src/yyy/yyy.rs:行号`
+- 📍 **响应**: `src/zzz/zzz.rs:行号`
+
+### 调用链示例:
+```markdown
+## 用户注册流程
+
+📁 **入口点**: `src/api/routes/auth.rs:45` (POST /api/register)
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant AuthController as src/api/controllers/auth.rs:23
+    participant UserService as src/services/user_service.rs:67
+    participant UserRepository as src/repositories/user_repo.rs:34
+    participant Database
+
+    Client->>AuthController: 提交注册请求
+    AuthController->>UserService: 验证数据并创建用户
+    UserService->>UserRepository: 保存用户到数据库
+    UserRepository->>Database: 执行插入操作
+    Database-->>UserRepository: 返回用户ID
+    UserRepository-->>UserService: 返回用户对象
+    UserService-->>AuthController: 返回创建结果
+    AuthController-->>Client: 返回用户信息和token
+```
+
+**关键代码位置**:
+- AuthController: `src/api/controllers/auth.rs:23` - 处理注册请求
+- UserService.register(): `src/services/user_service.rs:67` - 创建用户逻辑
+- UserRepository.save(): `src/repositories/user_repo.rs:34` - 数据库保存
+```
 
 ## 你的专业能力：
 1. **工作流程分析能力**：深度理解系统的核心工作流程、业务流程和技术流程
 2. **流程可视化能力**：精通流程图绘制、时序图和工作流图表的设计
-3. **系统洞察能力**：识别关键执行路径、流程节点和系统协调机制
+3. **调用链追踪能力**：精确追踪函数调用路径和组件交互
 4. **技术文档能力**：将复杂的工作流程以清晰、易懂的方式表达
 
 ## 工作流程文档标准：
@@ -147,7 +186,17 @@ impl StepForwardAgent for WorkflowEditor {
 - **业务价值**：明确各流程环节的业务价值和重要性
 - **知识传承**：便于新团队成员快速理解系统工作流程
 
-请基于调研材料生成一份符合以上要求的高质量且详细细致的核心工作流程说明文档。"#.to_string(),
+请基于调研材料生成一份符合以上要求的高质量且详细细致的核心工作流程说明文档。
+
+## 质量检查清单
+
+在输出文档前，请确认:
+- [ ] 每个主要流程都有 📁 入口文件路径和行号
+- [ ] 关键函数调用都标注了完整的调用链路
+- [ ] 至少 5 个核心流程有详细的时序图或流程图
+- [] 流程图中的每个节点都标注了代码位置
+- [ ] 文档包含异常处理和恢复机制的代码位置
+- [ ] 调用链清晰展示了模块间的交互关系"#.to_string(),
 
             llm_call_mode: LLMCallMode::PromptWithTools,
             formatter_config: FormatterConfig::default(),

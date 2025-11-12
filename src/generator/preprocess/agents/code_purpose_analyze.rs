@@ -54,7 +54,7 @@ impl CodePurposeEnhancer {
             log_tag: file_name.to_string(),
         }).await;
 
-        return match analyze_result {
+        match analyze_result {
             Ok(ai_analysis) => {
                 // 如果AI分析置信度高，使用AI结果
                 if ai_analysis.confidence > 0.7 {

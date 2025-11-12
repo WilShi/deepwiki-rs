@@ -1,0 +1,32 @@
+# 使用 Ubuntu 基础镜像来交叉编译 Windows 程序
+FROM ubuntu:22.04
+
+# 安装必要的工具
+RUN apt-get update && apt-get install -y \
+    curl \
+    build-essential \
+    mingw-w64 \
+    pkg-config \
+    && rm -rf /var/lib/apt/lists/*
+
+# 安装 Rust
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+ENV PATH="/root/.cargo/bin:${PATH}"
+
+# 添加 Windows 目标
+RUN rustup target add x86_64-pc-windows-gnu
+
+# 设置工作目录
+WORKDIR /app
+
+# 复制项目文件
+COPY . .
+
+# 编译 Windows 版本
+RUN cargo build --release --target x86_64-pc-windows-gnu
+
+# 输出目录
+VOLUME ["/output"]
+
+# 复制编译结果到输出目录
+CMD cp target/x86_64-pc-windows-gnu/release/deepwiki-rs.exe /output/

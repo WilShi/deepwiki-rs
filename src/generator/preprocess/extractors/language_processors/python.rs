@@ -1,5 +1,5 @@
 use super::{Dependency, LanguageProcessor};
-use crate::types::code::{InterfaceInfo, ParameterInfo};
+use crate::types::code::{InterfaceInfo, ParameterInfo, FieldInfo};
 use regex::Regex;
 use std::path::Path;
 
@@ -122,9 +122,10 @@ impl LanguageProcessor for PythonProcessor {
         "Python"
     }
 
-    fn extract_interfaces(&self, content: &str, _file_path: &Path) -> Vec<InterfaceInfo> {
+    fn extract_interfaces(&self, content: &str, file_path: &Path) -> Vec<InterfaceInfo> {
         let mut interfaces = Vec::new();
         let lines: Vec<&str> = content.lines().collect();
+        let file_path_str = file_path.to_string_lossy().to_string();
         
         for (i, line) in lines.iter().enumerate() {
             // 提取异步函数定义
@@ -132,48 +133,64 @@ impl LanguageProcessor for PythonProcessor {
                 let name = captures.get(1).map(|m| m.as_str()).unwrap_or("").to_string();
                 let params_str = captures.get(2).map(|m| m.as_str()).unwrap_or("");
                 let return_type = captures.get(3).map(|m| m.as_str().trim().to_string());
-                
+
                 let parameters = self.parse_python_parameters(params_str);
-                
-                interfaces.push(InterfaceInfo {
+
+                let mut interface = InterfaceInfo::new(
                     name,
-                    interface_type: "async_function".to_string(),
-                    visibility: "public".to_string(),
+                    "async_function".to_string(),
+                    "public".to_string(),
                     parameters,
                     return_type,
-                    description: self.extract_docstring(&lines, i),
-                });
+                    self.extract_docstring(&lines, i),
+                );
+                
+                // 设置文件路径和行号
+                interface.file_path = Some(file_path_str.clone());
+                interface.line_number = Some(i + 1);
+                
+                interfaces.push(interface);
             }
             // 提取普通函数定义
             else if let Some(captures) = self.function_regex.captures(line) {
                 let name = captures.get(1).map(|m| m.as_str()).unwrap_or("").to_string();
                 let params_str = captures.get(2).map(|m| m.as_str()).unwrap_or("");
                 let return_type = captures.get(3).map(|m| m.as_str().trim().to_string());
-                
+
                 let parameters = self.parse_python_parameters(params_str);
-                
-                interfaces.push(InterfaceInfo {
+
+                interfaces.push(InterfaceInfo::new(
                     name,
-                    interface_type: "function".to_string(),
-                    visibility: "public".to_string(),
+                    "function".to_string(),
+                    "public".to_string(),
                     parameters,
                     return_type,
-                    description: self.extract_docstring(&lines, i),
-                });
+                    self.extract_docstring(&lines, i),
+                ));
             }
             
             // 提取类定义
             if let Some(captures) = self.class_regex.captures(line) {
                 let name = captures.get(1).map(|m| m.as_str()).unwrap_or("").to_string();
                 
-                interfaces.push(InterfaceInfo {
+                // 提取类字段
+                let fields = self.extract_class_fields(&lines, i);
+
+                let mut interface = InterfaceInfo::new(
                     name,
-                    interface_type: "class".to_string(),
-                    visibility: "public".to_string(),
-                    parameters: Vec::new(),
-                    return_type: None,
-                    description: self.extract_docstring(&lines, i),
-                });
+                    "class".to_string(),
+                    "public".to_string(),
+                    Vec::new(),
+                    None,
+                    self.extract_docstring(&lines, i),
+                );
+                
+                // 设置文件路径和行号
+                interface.file_path = Some(file_path_str.clone());
+                interface.line_number = Some(i + 1);
+                interface.fields = fields;
+                
+                interfaces.push(interface);
             }
             
             // 提取方法定义（类内部）
@@ -181,7 +198,7 @@ impl LanguageProcessor for PythonProcessor {
                 let name = captures.get(1).map(|m| m.as_str()).unwrap_or("").to_string();
                 let params_str = captures.get(2).map(|m| m.as_str()).unwrap_or("");
                 let return_type = captures.get(3).map(|m| m.as_str().trim().to_string());
-                
+
                 let parameters = self.parse_python_parameters(params_str);
                 let visibility = if name.starts_with('_') {
                     if name.starts_with("__") && name.ends_with("__") {
@@ -192,15 +209,15 @@ impl LanguageProcessor for PythonProcessor {
                 } else {
                     "public"
                 };
-                
-                interfaces.push(InterfaceInfo {
+
+                interfaces.push(InterfaceInfo::new(
                     name,
-                    interface_type: "method".to_string(),
-                    visibility: visibility.to_string(),
+                    "method".to_string(),
+                    visibility.to_string(),
                     parameters,
                     return_type,
-                    description: self.extract_docstring(&lines, i),
-                });
+                    self.extract_docstring(&lines, i),
+                ));
             }
         }
         
@@ -209,6 +226,101 @@ impl LanguageProcessor for PythonProcessor {
 }
 
 impl PythonProcessor {
+    /// 提取类字段
+    fn extract_class_fields(&self, lines: &[&str], start_line: usize) -> Vec<FieldInfo> {
+        let mut fields = Vec::new();
+        let mut in_class = false;
+        let mut _method_indent_level = 0;
+        
+        for (_i, &line) in lines.iter().enumerate().skip(start_line) {
+            let trimmed = line.trim();
+            
+            // 跳过空行和注释
+            if trimmed.is_empty() || trimmed.starts_with('#') {
+                continue;
+            }
+            
+            // 检测类定义结束
+            if trimmed.starts_with("class ") || trimmed.starts_with("def ") || trimmed.starts_with("@") {
+                if in_class {
+                    break;
+                }
+            }
+            
+            // 检测类体开始
+            if trimmed.ends_with(':') && !in_class {
+                in_class = true;
+                _method_indent_level = line.len() - line.trim_start().len();
+                continue;
+            }
+            
+            if in_class {
+                let _current_indent = line.len() - line.trim_start().len();
+                
+                // 跳过方法定义（缩进级别相同或更小）
+                if trimmed.starts_with("def ") || trimmed.starts_with("@") {
+                    continue;
+                }
+                
+                // 解析字段: self.field_name: type = value
+                if let Some(field_info) = self.parse_class_field(trimmed) {
+                    fields.push(field_info);
+                }
+            }
+        }
+        
+        fields
+    }
+    
+    /// 解析单个类字段
+    fn parse_class_field(&self, line: &str) -> Option<FieldInfo> {
+        // 跳过方法定义
+        if line.starts_with("def ") || line.starts_with("@") {
+            return None;
+        }
+        
+        // 解析 self.field: type 或 self.field = value
+        if let Some(after_self) = line.strip_prefix("self.") {
+            let parts: Vec<&str> = after_self.splitn(2, ':').collect();
+            let field_name = parts[0].trim();
+            
+            if field_name.is_empty() {
+                return None;
+            }
+            
+            // 提取类型信息
+            let field_type = if parts.len() > 1 {
+                let type_and_value = parts[1].trim();
+                // 如果有 =，分割类型和默认值
+                if let Some(type_part) = type_and_value.split('=').next() {
+                    type_part.trim()
+                } else {
+                    type_and_value
+                }
+            } else {
+                "Any" // 默认类型
+            };
+            
+            // 检查是否有默认值
+            let has_default = after_self.contains("=");
+            
+            Some(FieldInfo {
+                name: field_name.to_string(),
+                field_type: field_type.to_string(),
+                visibility: "public".to_string(),
+                description: None,
+                is_optional: has_default,
+                default_value: if has_default {
+                    after_self.split('=').nth(1).map(|s| s.trim().to_string())
+                } else {
+                    None
+                },
+            })
+        } else {
+            None
+        }
+    }
+    
     /// 解析Python函数参数
     fn parse_python_parameters(&self, params_str: &str) -> Vec<ParameterInfo> {
         let mut parameters = Vec::new();
@@ -294,8 +406,8 @@ impl PythonProcessor {
                 }
                 
                 // 查找结束标记
-                for i in (current_line + 2)..lines.len() {
-                    let line = lines[i].trim();
+                for line in lines.iter().skip(current_line + 2) {
+                    let line = line.trim();
                     if line.ends_with(quote_type) {
                         let content = line.trim_end_matches(quote_type).trim();
                         if !content.is_empty() {
@@ -316,3 +428,7 @@ impl PythonProcessor {
         None
     }
 }
+
+// Include tests
+#[cfg(test)]
+mod tests;

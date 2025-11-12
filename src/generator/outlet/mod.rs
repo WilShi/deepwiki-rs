@@ -9,8 +9,15 @@ pub mod summary_generator;
 pub mod summary_outlet;
 pub mod fixer;
 
-pub use summary_outlet::SummaryOutlet;
+// pub use summary_outlet::SummaryOutlet; // 暂时注释，未使用
 pub use fixer::MermaidFixer;
+
+/// 保存文档
+pub async fn save(context: &GeneratorContext) -> Result<()> {
+    let doc_tree = DocTree::new(&context.config.target_language);
+    let outlet = DiskOutlet::new(doc_tree);
+    outlet.save(context).await
+}
 
 pub trait Outlet {
     async fn save(&self, context: &GeneratorContext) -> Result<()>;
