@@ -2,8 +2,11 @@ name: Build macOS Binaries
 
 on:
   push:
+    branches: [ main, develop ]
     tags:
       - 'v*'
+  pull_request:
+    branches: [ main ]
   workflow_dispatch:
 
 jobs:
