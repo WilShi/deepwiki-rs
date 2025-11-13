@@ -50,8 +50,6 @@ jobs:
           --window-size 600 400 \
           --icon-size 100 \
           --app-drop-link 425 120 \
-          --app-drop-link 425 220 \
-          --text-size 14 \
           dmg/deepwiki-rs
     
     - name: Upload artifact
@@ -97,13 +95,10 @@ jobs:
         cp target/aarch64-apple-darwin/release/deepwiki-rs dmg-arm64/deepwiki-rs
         create-dmg \
           --volname "DeepWiki-RS (Apple Silicon)" \
-          --volicon "icon.icns" \
           --window-pos 200 120 \
           --window-size 600 400 \
           --icon-size 100 \
           --app-drop-link 425 120 \
-          --app-drop-link 425 220 \
-          --text-size 14 \
           dmg-arm64/deepwiki-rs
     
     - name: Upload artifact
