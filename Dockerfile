@@ -1,5 +1,5 @@
 # Multi-stage Dockerfile for DeepWiki-RS
-FROM rust:1.75 as builder
+FROM rust:1.75 AS builder
 
 WORKDIR /app
 
@@ -17,7 +17,7 @@ COPY Cargo.toml Cargo.lock ./
 RUN cargo build --release
 
 # Runtime image
-FROM debian:bullsey-slim as runtime
+FROM debian:bookworm-slim as runtime
 
 # Install runtime dependencies
 RUN apt-get update && apt-get install -y \
