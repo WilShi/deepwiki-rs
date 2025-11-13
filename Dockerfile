@@ -17,7 +17,7 @@ COPY Cargo.toml Cargo.lock ./
 RUN cargo build --release
 
 # Runtime image
-FROM debian:bookworm-slim as runtime
+FROM debian:bookworm-slim AS runtime
 
 # Install runtime dependencies
 RUN apt-get update && apt-get install -y \
@@ -25,7 +25,7 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Create app user
-RUN useradd -m -u deepwiki deepwiki
+RUN useradd -m -u deepwiki
 
 # Copy the binary from builder
 COPY --from=builder /app/target/release/deepwiki-rs /usr/local/bin/
