@@ -3,7 +3,9 @@ use std::path::PathBuf;
 use std::path::Path;
 
 use crate::{
-    generator::preprocess::extractors::language_processors::{LanguageProcessor, LanguageProcessorManager},
+    generator::preprocess::extractors::language_processors::{
+        LanguageProcessor, LanguageProcessorManager,
+    },
     types::code::CodeInsight,
 };
 
@@ -217,7 +219,7 @@ fn smart_find_by_language(
 ) -> Option<PathBuf> {
     // 这里可以根据不同语言处理器的特性实现更智能的查找逻辑
     // 例如：Rust的模块系统、Python的包结构、JavaScript的node_modules等
-    
+
     // 目前返回None，让递归搜索作为兜底
     None
 }

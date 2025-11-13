@@ -177,7 +177,11 @@ impl CacheManager {
     }
 
     /// 获取压缩结果缓存
-    pub async fn get_compression_cache(&self, original_content: &str, content_type: &str) -> Result<Option<String>> {
+    pub async fn get_compression_cache(
+        &self,
+        original_content: &str,
+        content_type: &str,
+    ) -> Result<Option<String>> {
         let cache_key = format!("{}_{}", content_type, self.hash_prompt(original_content));
         self.get::<String>("prompt_compression", &cache_key).await
     }
@@ -190,7 +194,8 @@ impl CacheManager {
         compressed_content: String,
     ) -> Result<()> {
         let cache_key = format!("{}_{}", content_type, self.hash_prompt(original_content));
-        self.set("prompt_compression", &cache_key, compressed_content).await
+        self.set("prompt_compression", &cache_key, compressed_content)
+            .await
     }
     pub async fn set<T>(&self, category: &str, prompt: &str, data: T) -> Result<()>
     where

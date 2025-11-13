@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
-    use crate::generator::preprocess::extractors::language_processors::java::JavaProcessor;
     use crate::generator::preprocess::extractors::language_processors::LanguageProcessor;
+    use crate::generator::preprocess::extractors::language_processors::java::JavaProcessor;
     use std::path::Path;
 
     #[test]
@@ -17,34 +17,40 @@ import com.example.MyClass;
 import static java.util.Collections.emptyList;
 import static org.junit.Assert.*;
 "#;
-        
+
         let deps = processor.extract_dependencies(content, Path::new("Test.java"));
-        
+
         assert_eq!(deps.len(), 8); // There are actually 8 import lines (including 2 static imports)
-        
+
         // Check JDK import
         let list_dep = &deps[0];
         assert_eq!(list_dep.name, "List");
         assert_eq!(list_dep.path, Some("java.util.List".to_string()));
         assert!(list_dep.is_external);
         assert_eq!(list_dep.dependency_type, "import");
-        
+
         // Check external library import
         let string_dep = &deps[4];
         assert_eq!(string_dep.name, "StringUtils");
-        assert_eq!(string_dep.path, Some("org.apache.commons.lang.StringUtils".to_string()));
+        assert_eq!(
+            string_dep.path,
+            Some("org.apache.commons.lang.StringUtils".to_string())
+        );
         assert!(string_dep.is_external);
-        
+
         // Check MyClass import
         let myclass_dep = &deps[5];
         assert_eq!(myclass_dep.name, "MyClass");
         assert_eq!(myclass_dep.path, Some("com.example.MyClass".to_string()));
         assert!(myclass_dep.is_external);
-        
+
         // Check static import
         let empty_dep = &deps[6];
         assert_eq!(empty_dep.name, "emptyList");
-        assert_eq!(empty_dep.path, Some("static java.util.Collections.emptyList".to_string()));
+        assert_eq!(
+            empty_dep.path,
+            Some("static java.util.Collections.emptyList".to_string())
+        );
         assert!(empty_dep.is_external);
         assert_eq!(empty_dep.dependency_type, "import"); // Currently implementation doesn't distinguish static imports
     }
@@ -61,16 +67,16 @@ public class Test {
     // ...
 }
 "#;
-        
+
         let deps = processor.extract_dependencies(content, Path::new("Test.java"));
         assert_eq!(deps.len(), 2);
-        
+
         // Check package dependency
         let package_dep = &deps[0];
         assert_eq!(package_dep.name, "com.example.project");
         assert!(!package_dep.is_external);
         assert_eq!(package_dep.dependency_type, "package");
-        
+
         // Check regular import
         let list_dep = &deps[1];
         assert_eq!(list_dep.name, "List");
@@ -80,24 +86,18 @@ public class Test {
     #[test]
     fn test_determine_component_type() {
         let processor = JavaProcessor::new();
-        
+
         // Test test files
         assert_eq!(
-            processor.determine_component_type(
-                Path::new("UserTest.java"),
-                ""
-            ),
+            processor.determine_component_type(Path::new("UserTest.java"), ""),
             "java_test"
         );
-        
+
         assert_eq!(
-            processor.determine_component_type(
-                Path::new("UserTests.java"),
-                ""
-            ),
+            processor.determine_component_type(Path::new("UserTests.java"), ""),
             "java_test"
         );
-        
+
         // Test interface
         assert_eq!(
             processor.determine_component_type(
@@ -106,16 +106,13 @@ public class Test {
             ),
             "java_interface"
         );
-        
+
         // Test enum
         assert_eq!(
-            processor.determine_component_type(
-                Path::new("Status.java"),
-                "public enum Status"
-            ),
+            processor.determine_component_type(Path::new("Status.java"), "public enum Status"),
             "java_enum"
         );
-        
+
         // Test abstract class
         assert_eq!(
             processor.determine_component_type(
@@ -124,7 +121,7 @@ public class Test {
             ),
             "java_abstract_class"
         );
-        
+
         // Test regular class
         assert_eq!(
             processor.determine_component_type(
@@ -133,13 +130,10 @@ public class Test {
             ),
             "java_class"
         );
-        
+
         // Test file without class
         assert_eq!(
-            processor.determine_component_type(
-                Path::new("config.txt"),
-                ""
-            ),
+            processor.determine_component_type(Path::new("config.txt"), ""),
             "java_file"
         );
     }
@@ -147,7 +141,7 @@ public class Test {
     #[test]
     fn test_is_important_line() {
         let processor = JavaProcessor::new();
-        
+
         // Important lines
         assert!(processor.is_important_line("public class TestClass {"));
         assert!(processor.is_important_line("private void testMethod() {"));
@@ -156,7 +150,7 @@ public class Test {
         assert!(processor.is_important_line("public enum TestEnum {"));
         assert!(processor.is_important_line("import java.util.List;"));
         assert!(processor.is_important_line("package com.example;"));
-        
+
         // Non-important lines
         assert!(!processor.is_important_line("// This is a comment"));
         assert!(!processor.is_important_line("System.out.println(\"debug\");"));
@@ -184,10 +178,10 @@ public class UserService {
     }
 }
 "#;
-        
+
         let interfaces = processor.extract_interfaces(content, Path::new("Test.java"));
         assert!(!interfaces.is_empty()); // At least one interface is extracted
-        
+
         // Find UserService class
         if let Some(user_service) = interfaces.iter().find(|i| i.name == "UserService") {
             assert_eq!(user_service.interface_type, "class");
@@ -240,15 +234,15 @@ public class UserController {
     }
 }
 "#;
-        
+
         let interfaces = processor.extract_interfaces(content, Path::new("Test.java"));
         assert!(interfaces.len() >= 2); // At least 2 classes are extracted
-        
+
         // Find entity class
         if let Some(user) = interfaces.iter().find(|i| i.name == "User") {
             assert_eq!(user.interface_type, "class");
         }
-        
+
         // Find controller
         if let Some(controller) = interfaces.iter().find(|i| i.name == "UserController") {
             assert_eq!(controller.interface_type, "class");
@@ -259,7 +253,7 @@ public class UserController {
     fn test_extract_interfaces_empty() {
         let processor = JavaProcessor::new();
         let content = "// Just comments\n/* Block comment */\n\n";
-        
+
         let interfaces = processor.extract_interfaces(content, Path::new("Test.java"));
         assert!(interfaces.is_empty());
     }
@@ -292,16 +286,17 @@ public class OuterClass {
     }
 }
 "#;
-        
+
         let interfaces = processor.extract_interfaces(content, Path::new("Test.java"));
         assert!(interfaces.len() >= 3); // At least 3 classes are extracted
-        
+
         // Check that we have the expected classes
-        let class_names: Vec<String> = interfaces.iter()
+        let class_names: Vec<String> = interfaces
+            .iter()
             .filter(|i| i.interface_type == "class")
             .map(|i| i.name.clone())
             .collect();
-        
+
         assert!(class_names.contains(&"OuterClass".to_string()));
         // Inner classes may not be extracted as separate classes
         if class_names.contains(&"InnerClass".to_string()) {
@@ -336,10 +331,10 @@ public class GenericService<T, R> {
     }
 }
 "#;
-        
+
         let interfaces = processor.extract_interfaces(content, Path::new("Test.java"));
         assert_eq!(interfaces.len(), 4); // More methods are extracted than expected
-        
+
         let service = &interfaces[0];
         assert_eq!(service.name, "GenericService");
         assert_eq!(service.interface_type, "class");

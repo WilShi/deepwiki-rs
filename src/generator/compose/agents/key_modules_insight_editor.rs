@@ -55,7 +55,15 @@ impl KeyModulesInsightEditor {
 
                 doc_tree.insert(
                     &insight_key,
-                    format!("{}/{}.md", context.config.target_language.get_directory_name("deep_exploration"), &domain_name).as_str(),
+                    format!(
+                        "{}/{}.md",
+                        context
+                            .config
+                            .target_language
+                            .get_directory_name("deep_exploration"),
+                        &domain_name
+                    )
+                    .as_str(),
                 );
             }
         }

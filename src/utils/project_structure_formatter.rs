@@ -152,7 +152,13 @@ impl DirectoryTree {
     }
 
     /// 递归渲染目录节点
-    fn render_directory_node(&self, node: &DirectoryNode, prefix: &str, is_last: bool, result: &mut String) {
+    fn render_directory_node(
+        &self,
+        node: &DirectoryNode,
+        prefix: &str,
+        is_last: bool,
+        result: &mut String,
+    ) {
         if !node.name.is_empty() {
             let connector = if is_last { "└── " } else { "├── " };
             result.push_str(&format!("{}{}{}/\n", prefix, connector, node.name));
@@ -310,49 +316,49 @@ mod tests {
         };
 
         let result = ProjectStructureFormatter::format_as_directory_tree(&structure);
-        
+
         // 检查基本格式
         assert!(result.contains("### 项目目录结构"));
         assert!(result.contains("test_project"));
         assert!(result.contains("/test"));
-        
+
         // 检查目录结构（应该只包含目录，不包含文件）
         assert!(result.contains("src/"));
         assert!(result.contains("utils/"));
         assert!(result.contains("tests/"));
         assert!(result.contains("docs/"));
-        
+
         // 确保不包含文件名
         assert!(!result.contains("main.rs"));
         assert!(!result.contains("lib.rs"));
         assert!(!result.contains("mod.rs"));
         assert!(!result.contains("integration_test.rs"));
         assert!(!result.contains("README.md"));
-        
+
         println!("Directory tree output:\n{}", result);
     }
 
     #[test]
     fn test_directory_tree_structure() {
         let mut dir_tree = DirectoryTree::new();
-        
+
         // 插入一些目录路径
         dir_tree.insert_directory(&PathBuf::from("src"));
         dir_tree.insert_directory(&PathBuf::from("src/utils"));
         dir_tree.insert_directory(&PathBuf::from("tests"));
         dir_tree.insert_directory(&PathBuf::from("docs"));
-        
+
         let result = dir_tree.to_tree_string();
-        
+
         // 检查树形结构
         assert!(result.contains("src/"));
         assert!(result.contains("utils/"));
         assert!(result.contains("tests/"));
         assert!(result.contains("docs/"));
-        
+
         // 检查树形连接符
         assert!(result.contains("├──") || result.contains("└──"));
-        
+
         println!("Tree structure:\n{}", result);
     }
 }

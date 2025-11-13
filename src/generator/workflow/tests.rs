@@ -13,7 +13,7 @@ mod tests {
             internal_path: temp_dir.path().join(".litho"),
             ..Default::default()
         };
-        
+
         let context = GeneratorContext::new(config).unwrap();
         (context, temp_dir)
     }
@@ -21,7 +21,7 @@ mod tests {
     #[tokio::test]
     async fn test_workflow_launch_basic() {
         let (_context, _temp_dir) = create_test_context();
-        
+
         // This test would need mocking of LLM calls
         // For now, just verify the context creation works
         // let result = launch(&context).await;
@@ -31,7 +31,7 @@ mod tests {
     #[test]
     fn test_generator_context_creation() {
         let (_context, _temp_dir) = create_test_context();
-        
+
         // Verify context was created successfully
         // No actual assertion needed as creation would panic on failure
     }
@@ -39,7 +39,7 @@ mod tests {
     #[test]
     fn test_generator_context_paths() {
         let (context, temp_dir) = create_test_context();
-        
+
         assert_eq!(context.config.project_path, temp_dir.path());
         assert_eq!(context.config.output_path, temp_dir.path().join("output"));
         assert_eq!(context.config.internal_path, temp_dir.path().join(".litho"));
@@ -48,7 +48,7 @@ mod tests {
     #[test]
     fn test_generator_context_config_values() {
         let (context, _temp_dir) = create_test_context();
-        
+
         // Check default config values
         assert!(context.config.analyze_dependencies);
         assert!(context.config.identify_components);
@@ -62,7 +62,7 @@ mod tests {
     #[test]
     fn test_generator_context_llm_config() {
         let (context, _temp_dir) = create_test_context();
-        
+
         // Check LLM config
         // api_key may be empty if env var is not set
         assert!(!context.config.llm.api_base_url.is_empty());
@@ -75,10 +75,13 @@ mod tests {
     #[test]
     fn test_generator_context_cache_config() {
         let (context, _temp_dir) = create_test_context();
-        
+
         // Check cache config
         assert!(context.config.cache.enabled);
-        assert_eq!(context.config.cache.cache_dir, PathBuf::from(".litho/cache"));
+        assert_eq!(
+            context.config.cache.cache_dir,
+            PathBuf::from(".litho/cache")
+        );
         assert_eq!(context.config.cache.expire_hours, 8760);
     }
 
@@ -95,12 +98,15 @@ mod tests {
             verbose: true,
             ..Default::default()
         };
-        
+
         let context = GeneratorContext::new(config);
         assert!(context.is_ok());
-        
+
         let ctx = context.unwrap();
-        assert_eq!(ctx.config.project_path, temp_dir.path().join("custom_project"));
+        assert_eq!(
+            ctx.config.project_path,
+            temp_dir.path().join("custom_project")
+        );
         assert_eq!(ctx.config.max_depth, 5);
         assert_eq!(ctx.config.core_component_percentage, 30.0);
         assert!(ctx.config.force_regenerate);
@@ -113,7 +119,7 @@ mod tests {
             project_path: PathBuf::from("/nonexistent/path"),
             ..Default::default()
         };
-        
+
         // Context creation should still succeed even with invalid paths
         let context = GeneratorContext::new(config);
         assert!(context.is_ok());
@@ -129,10 +135,10 @@ mod tests {
             skip_documentation: true,
             ..Default::default()
         };
-        
+
         let context = GeneratorContext::new(config);
         assert!(context.is_ok());
-        
+
         let ctx = context.unwrap();
         assert!(ctx.config.skip_preprocessing);
         assert!(ctx.config.skip_research);
@@ -149,14 +155,22 @@ mod tests {
             excluded_extensions: vec!["test_ext".to_string()],
             ..Default::default()
         };
-        
+
         let context = GeneratorContext::new(config);
         assert!(context.is_ok());
-        
+
         let ctx = context.unwrap();
-        assert!(ctx.config.excluded_dirs.contains(&"test_exclude".to_string()));
+        assert!(
+            ctx.config
+                .excluded_dirs
+                .contains(&"test_exclude".to_string())
+        );
         assert!(ctx.config.excluded_files.contains(&"test.txt".to_string()));
-        assert!(ctx.config.excluded_extensions.contains(&"test_ext".to_string()));
+        assert!(
+            ctx.config
+                .excluded_extensions
+                .contains(&"test_ext".to_string())
+        );
     }
 
     #[test]
@@ -167,10 +181,10 @@ mod tests {
             max_file_size: 1024, // 1KB
             ..Default::default()
         };
-        
+
         let context = GeneratorContext::new(config);
         assert!(context.is_ok());
-        
+
         let ctx = context.unwrap();
         assert_eq!(ctx.config.max_file_size, 1024);
     }
@@ -178,17 +192,17 @@ mod tests {
     #[test]
     fn test_target_language() {
         use crate::i18n::TargetLanguage;
-        
+
         let temp_dir = TempDir::new().unwrap();
         let config = Config {
             project_path: temp_dir.path().to_path_buf(),
             target_language: TargetLanguage::Japanese,
             ..Default::default()
         };
-        
+
         let context = GeneratorContext::new(config);
         assert!(context.is_ok());
-        
+
         let ctx = context.unwrap();
         assert_eq!(ctx.config.target_language, TargetLanguage::Japanese);
     }
@@ -202,10 +216,10 @@ mod tests {
             architecture_meta_path: Some(meta_path.clone()),
             ..Default::default()
         };
-        
+
         let context = GeneratorContext::new(config);
         assert!(context.is_ok());
-        
+
         let ctx = context.unwrap();
         assert_eq!(ctx.config.architecture_meta_path, Some(meta_path));
     }
@@ -218,10 +232,10 @@ mod tests {
             project_name: None,
             ..Default::default()
         };
-        
+
         let context = GeneratorContext::new(config);
         assert!(context.is_ok());
-        
+
         let ctx = context.unwrap();
         assert!(ctx.config.project_name.is_none());
     }
@@ -234,10 +248,10 @@ mod tests {
             project_name: Some("Test Project".to_string()),
             ..Default::default()
         };
-        
+
         let context = GeneratorContext::new(config);
         assert!(context.is_ok());
-        
+
         let ctx = context.unwrap();
         assert_eq!(ctx.config.project_name, Some("Test Project".to_string()));
     }

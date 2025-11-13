@@ -1,5 +1,5 @@
-use crate::generator::preprocess::agents::code_purpose_analyze::CodePurposeEnhancer;
 use crate::generator::context::GeneratorContext;
+use crate::generator::preprocess::agents::code_purpose_analyze::CodePurposeEnhancer;
 use crate::generator::preprocess::extractors::language_processors::LanguageProcessorManager;
 use crate::types::code::{CodeDossier, CodePurpose, CodePurposeMapper};
 use crate::types::project_structure::ProjectStructure;

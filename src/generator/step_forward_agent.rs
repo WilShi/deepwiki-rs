@@ -22,7 +22,10 @@ use crate::{
 pub fn replace_time_placeholders(content: &str) -> String {
     let now = chrono::Utc::now();
     content
-        .replace("__CURRENT_UTC_TIME__", &format!("{} (UTC)", now.format("%Y-%m-%d %H:%M:%S")))
+        .replace(
+            "__CURRENT_UTC_TIME__",
+            &format!("{} (UTC)", now.format("%Y-%m-%d %H:%M:%S")),
+        )
         .replace("__CURRENT_TIMESTAMP__", &now.timestamp().to_string())
 }
 
@@ -468,7 +471,10 @@ pub trait StepForwardAgent: Send + Sync {
 
     /// 可选的自定义prompt内容提供钩子
     /// 返回自定义的prompt内容，将被插入到标准prompt的调研材料参考部分
-    async fn provide_custom_prompt_content(&self, _context: &GeneratorContext) -> Result<Option<String>> {
+    async fn provide_custom_prompt_content(
+        &self,
+        _context: &GeneratorContext,
+    ) -> Result<Option<String>> {
         Ok(None)
     }
 
@@ -504,21 +510,22 @@ pub trait StepForwardAgent: Send + Sync {
 
         // 4. 使用标准模板构建prompt，并根据目标语言调整
         let mut template = self.prompt_template();
-        
+
         // 根据配置的目标语言添加语言指令
         let language_instruction = context.config.target_language.prompt_instruction();
         template.system_prompt = format!("{}\n\n{}", template.system_prompt, language_instruction);
-        
+
         let prompt_builder = GeneratorPromptBuilder::new(template.clone());
-        
+
         // 获取自定义prompt内容
         let custom_content = self.provide_custom_prompt_content(context).await?;
-        
+
         // 检查是否需要包含时间戳
         let include_timestamp = self.should_include_timestamp();
-        
-        let (system_prompt, user_prompt) =
-            prompt_builder.build_prompts(context, &all_sources, custom_content, include_timestamp).await?;
+
+        let (system_prompt, user_prompt) = prompt_builder
+            .build_prompts(context, &all_sources, custom_content, include_timestamp)
+            .await?;
 
         // 5. 根据配置选择LLM调用方式
         let params = AgentExecuteParams {

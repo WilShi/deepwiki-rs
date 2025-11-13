@@ -25,7 +25,7 @@ impl GeneratorContext {
         let llm_client = LLMClient::new(config.clone())?;
         let cache_manager = Arc::new(RwLock::new(CacheManager::new(config.cache.clone())));
         let memory = Arc::new(RwLock::new(Memory::new()));
-        
+
         Ok(Self {
             llm_client,
             config,

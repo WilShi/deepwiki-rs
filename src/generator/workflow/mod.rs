@@ -1,6 +1,6 @@
-use anyhow::Result;
 use crate::config::Config;
 use crate::generator::context::GeneratorContext;
+use anyhow::Result;
 
 pub struct TimingScope;
 
@@ -22,22 +22,22 @@ impl TimingKeys {
 /// 启动文档生成工作流
 pub async fn launch(config: &Config) -> Result<()> {
     let context = GeneratorContext::new(config.clone())?;
-    
+
     // 执行工作流
     if !config.skip_preprocessing {
         crate::generator::preprocess::execute(&context).await?;
     }
-    
+
     if !config.skip_research {
         crate::generator::research::execute(&context).await?;
     }
-    
+
     if !config.skip_documentation {
         crate::generator::compose::execute(&context).await?;
     }
-    
+
     crate::generator::outlet::save(&context).await?;
-    
+
     Ok(())
 }
 

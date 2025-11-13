@@ -123,7 +123,9 @@ impl CachePerformanceMonitor {
         if let Ok(mut category_map) = self.metrics.category_metrics.write() {
             let category_metrics = category_map.entry(category.to_string()).or_default();
             category_metrics.hits.fetch_add(1, Ordering::Relaxed);
-            category_metrics.time_saved.fetch_add(inference_time_saved.as_millis() as u64, Ordering::Relaxed);
+            category_metrics
+                .time_saved
+                .fetch_add(inference_time_saved.as_millis() as u64, Ordering::Relaxed);
         }
 
         println!(
@@ -139,13 +141,13 @@ impl CachePerformanceMonitor {
     /// 记录缓存未命中
     pub fn record_cache_miss(&self, category: &str) {
         self.metrics.cache_misses.fetch_add(1, Ordering::Relaxed);
-        
+
         // 更新分类统计
         if let Ok(mut category_map) = self.metrics.category_metrics.write() {
             let category_metrics = category_map.entry(category.to_string()).or_default();
             category_metrics.misses.fetch_add(1, Ordering::Relaxed);
         }
-        
+
         println!("   ⌛ 缓存未命中 [{}] - 需要进行AI推理", category);
     }
 
@@ -200,28 +202,34 @@ impl CachePerformanceMonitor {
 
         // 生成分类统计
         let category_stats = if let Ok(category_map) = self.metrics.category_metrics.read() {
-            category_map.iter().map(|(category, metrics)| {
-                let cat_hits = metrics.hits.load(Ordering::Relaxed);
-                let cat_misses = metrics.misses.load(Ordering::Relaxed);
-                let cat_time_saved = metrics.time_saved.load(Ordering::Relaxed);
-                
-                let cat_hit_rate = if cat_hits + cat_misses > 0 {
-                    cat_hits as f64 / (cat_hits + cat_misses) as f64
-                } else {
-                    0.0
-                };
-                
-                let cat_time_saved_seconds = cat_time_saved as f64 / 1000.0;
-                let cat_cost_saved = cat_time_saved_seconds * 0.00001; // 简化的成本估算
-                
-                (category.clone(), CategoryPerformanceStats {
-                    hits: cat_hits,
-                    misses: cat_misses,
-                    hit_rate: cat_hit_rate,
-                    time_saved: cat_time_saved_seconds,
-                    cost_saved: cat_cost_saved,
+            category_map
+                .iter()
+                .map(|(category, metrics)| {
+                    let cat_hits = metrics.hits.load(Ordering::Relaxed);
+                    let cat_misses = metrics.misses.load(Ordering::Relaxed);
+                    let cat_time_saved = metrics.time_saved.load(Ordering::Relaxed);
+
+                    let cat_hit_rate = if cat_hits + cat_misses > 0 {
+                        cat_hits as f64 / (cat_hits + cat_misses) as f64
+                    } else {
+                        0.0
+                    };
+
+                    let cat_time_saved_seconds = cat_time_saved as f64 / 1000.0;
+                    let cat_cost_saved = cat_time_saved_seconds * 0.00001; // 简化的成本估算
+
+                    (
+                        category.clone(),
+                        CategoryPerformanceStats {
+                            hits: cat_hits,
+                            misses: cat_misses,
+                            hit_rate: cat_hit_rate,
+                            time_saved: cat_time_saved_seconds,
+                            cost_saved: cat_cost_saved,
+                        },
+                    )
                 })
-            }).collect()
+                .collect()
         } else {
             HashMap::new()
         };

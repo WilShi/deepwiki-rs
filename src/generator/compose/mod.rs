@@ -19,7 +19,7 @@ pub async fn execute(context: &GeneratorContext) -> Result<()> {
         println!("   ⚠️ LLM已禁用，跳过文档生成阶段");
         return Ok(());
     }
-    
+
     let mut doc_tree = DocTree::new(&context.config.target_language);
     let composer = DocumentationComposer::default();
     composer.execute(context, &mut doc_tree).await
@@ -32,7 +32,10 @@ pub struct DocumentationComposer;
 impl DocumentationComposer {
     pub async fn execute(&self, context: &GeneratorContext, doc_tree: &mut DocTree) -> Result<()> {
         println!("\n🤖 执行文档生成流程...");
-        println!("📝 目标语言: {}", context.config.target_language.display_name());
+        println!(
+            "📝 目标语言: {}",
+            context.config.target_language.display_name()
+        );
 
         let overview_editor = OverviewEditor::default();
         overview_editor.execute(context).await?;

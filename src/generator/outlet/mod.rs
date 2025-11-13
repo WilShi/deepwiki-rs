@@ -5,9 +5,9 @@ use anyhow::Result;
 use std::collections::HashMap;
 use std::fs;
 
+pub mod fixer;
 pub mod summary_generator;
 pub mod summary_outlet;
-pub mod fixer;
 
 // pub use summary_outlet::SummaryOutlet; // 暂时注释，未使用
 pub use fixer::MermaidFixer;

@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
-    use crate::generator::preprocess::extractors::language_processors::python::PythonProcessor;
     use crate::generator::preprocess::extractors::language_processors::LanguageProcessor;
+    use crate::generator::preprocess::extractors::language_processors::python::PythonProcessor;
     use std::path::Path;
 
     #[test]
@@ -16,25 +16,28 @@ from external_lib import ExternalClass
 import local_module
 import package.submodule
 "#;
-        
+
         let deps = processor.extract_dependencies(content, Path::new("test.py"));
-        
+
         assert_eq!(deps.len(), 7); // typing imports List and Dict are counted separately
-        
+
         // Check built-in import
         let os_dep = &deps[0];
         assert_eq!(os_dep.name, "test.py");
         assert_eq!(os_dep.path, Some("os".to_string()));
         assert!(os_dep.is_external);
         assert_eq!(os_dep.dependency_type, "import");
-        
+
         // Check local import
         let utils_dep = &deps[3];
         assert_eq!(utils_dep.path, Some(".utils".to_string())); // The actual path is .utils
         assert!(!utils_dep.is_external);
-        
+
         // Find package import
-        if let Some(package_dep) = deps.iter().find(|d| d.path == Some("package.submodule".to_string())) {
+        if let Some(package_dep) = deps
+            .iter()
+            .find(|d| d.path == Some("package.submodule".to_string()))
+        {
             assert!(package_dep.is_external);
         }
     }
@@ -48,11 +51,11 @@ from .models import User, Post
 from external_pkg import ExternalClass
 from package.module import specific_function
 "#;
-        
+
         let deps = processor.extract_dependencies(content, Path::new("test.py"));
-        
+
         assert_eq!(deps.len(), 4);
-        
+
         // Check from import
         let collections_dep = &deps[0];
         assert_eq!(collections_dep.path, Some("collections".to_string()));
@@ -63,16 +66,13 @@ from package.module import specific_function
     #[test]
     fn test_determine_component_type() {
         let processor = PythonProcessor::new();
-        
+
         // Test package init
         assert_eq!(
-            processor.determine_component_type(
-                Path::new("__init__.py"),
-                ""
-            ),
+            processor.determine_component_type(Path::new("__init__.py"), ""),
             "python_package"
         );
-        
+
         // Test models (with class content)
         assert_eq!(
             processor.determine_component_type(
@@ -81,16 +81,13 @@ from package.module import specific_function
             ),
             "python_class"
         );
-        
+
         // Test views (with function content)
         assert_eq!(
-            processor.determine_component_type(
-                Path::new("views.py"),
-                "def view():"
-            ),
+            processor.determine_component_type(Path::new("views.py"), "def view():"),
             "python_module"
         );
-        
+
         // Test controllers (with function content)
         assert_eq!(
             processor.determine_component_type(
@@ -99,50 +96,36 @@ from package.module import specific_function
             ),
             "python_module"
         );
-        
+
         // Test services (with function content)
         assert_eq!(
-            processor.determine_component_type(
-                Path::new("services/user_service.py"),
-                "def serve():"
-            ),
+            processor
+                .determine_component_type(Path::new("services/user_service.py"), "def serve():"),
             "python_module"
         );
-        
+
         // Test main files
         assert_eq!(
-            processor.determine_component_type(
-                Path::new("main.py"),
-                ""
-            ),
+            processor.determine_component_type(Path::new("main.py"), ""),
             "python_main"
         );
-        
+
         assert_eq!(
-            processor.determine_component_type(
-                Path::new("app.py"),
-                ""
-            ),
+            processor.determine_component_type(Path::new("app.py"), ""),
             "python_main"
         );
-        
+
         // Test test files
         assert_eq!(
-            processor.determine_component_type(
-                Path::new("test_user.py"),
-                ""
-            ),
+            processor.determine_component_type(Path::new("test_user.py"), ""),
             "python_test"
         );
-        
+
         assert_eq!(
-            processor.determine_component_type(
-                Path::new("user_test.py"),
-                ""
-            ),
+            processor.determine_component_type(Path::new("user_test.py"), ""),
             "python_test"
         );
-        
+
         // Test class
         assert_eq!(
             processor.determine_component_type(
@@ -152,22 +135,16 @@ from package.module import specific_function
             ),
             "python_class"
         );
-        
+
         // Test module
         assert_eq!(
-            processor.determine_component_type(
-                Path::new("utils.py"),
-                "def helper():"
-            ),
+            processor.determine_component_type(Path::new("utils.py"), "def helper():"),
             "python_module"
         );
-        
+
         // Test script
         assert_eq!(
-            processor.determine_component_type(
-                Path::new("script.py"),
-                "print('hello')"
-            ),
+            processor.determine_component_type(Path::new("script.py"), "print('hello')"),
             "python_script"
         );
     }
@@ -175,7 +152,7 @@ from package.module import specific_function
     #[test]
     fn test_is_important_line() {
         let processor = PythonProcessor::new();
-        
+
         // Important lines
         assert!(processor.is_important_line("def test_function():"));
         assert!(processor.is_important_line("class TestClass:"));
@@ -185,7 +162,7 @@ from package.module import specific_function
         assert!(processor.is_important_line("import module"));
         assert!(processor.is_important_line("# TODO: fix this"));
         assert!(processor.is_important_line("# FIXME: broken"));
-        
+
         // Non-important lines
         assert!(!processor.is_important_line("# This is a comment"));
         assert!(!processor.is_important_line("print('debug')"));
@@ -245,11 +222,11 @@ class AbstractRepository(ABC):
     def save(self, entity):
         pass
 "#;
-        
+
         let interfaces = processor.extract_interfaces(content, Path::new("test.py"));
-        
+
         assert_eq!(interfaces.len(), 14); // The implementation extracts more methods than expected
-        
+
         // Check function
         let create_user = &interfaces[0];
         assert_eq!(create_user.name, "create_user");
@@ -259,22 +236,22 @@ class AbstractRepository(ABC):
         assert_eq!(create_user.parameters[0].param_type, "str");
         assert_eq!(create_user.parameters[2].is_optional, true);
         assert_eq!(create_user.return_type, Some("Dict[str, Any]".to_string()));
-        
+
         // Check async function
         let fetch_user = &interfaces[1];
         assert_eq!(fetch_user.name, "fetch_user");
         assert_eq!(fetch_user.interface_type, "async_function");
-        
+
         // Check class
         let user_service = &interfaces[2];
         assert_eq!(user_service.name, "UserService");
         assert_eq!(user_service.interface_type, "class");
-        
+
         // Check dataclass
         if let Some(user) = interfaces.iter().find(|i| i.name == "User") {
             assert_eq!(user.interface_type, "class"); // Python implementation may not distinguish dataclass
         }
-        
+
         // Check abstract class
         if let Some(repo) = interfaces.iter().find(|i| i.name == "AbstractRepository") {
             assert_eq!(repo.interface_type, "class"); // May not distinguish abstract class
@@ -285,7 +262,7 @@ class AbstractRepository(ABC):
     fn test_extract_interfaces_empty() {
         let processor = PythonProcessor::new();
         let content = "# Just comments\n\"\"\"Docstring\"\"\"\n\n";
-        
+
         let interfaces = processor.extract_interfaces(content, Path::new("test.py"));
         assert!(interfaces.is_empty());
     }
@@ -310,10 +287,10 @@ def cached_value(self):
 def from_dict(cls, data):
     return cls(**data)
 "#;
-        
+
         let interfaces = processor.extract_interfaces(content, Path::new("test.py"));
         assert_eq!(interfaces.len(), 4);
-        
+
         // All should be functions
         for interface in interfaces {
             assert_eq!(interface.interface_type, "function");
@@ -336,10 +313,10 @@ class AnotherService(SpecificService):
     def another_method(self):
         return self.specific_method() + " another"
 "#;
-        
+
         let interfaces = processor.extract_interfaces(content, Path::new("test.py"));
         assert_eq!(interfaces.len(), 9); // More methods are extracted than expected
-        
+
         // Check inheritance relationships
         if let Some(base) = interfaces.iter().find(|i| i.name == "BaseService") {
             assert_eq!(base.name, "BaseService");
@@ -365,10 +342,10 @@ from package import specific_item
 from external_lib import ExternalClass as External
 import package.submodule as submod
 "#;
-        
+
         let deps = processor.extract_dependencies(content, Path::new("test.py"));
         assert!(deps.len() >= 7); // At least 7 dependencies are extracted
-        
+
         // Verify different dependency types
         let types: Vec<String> = deps.iter().map(|d| d.dependency_type.clone()).collect();
         assert!(types.contains(&"import".to_string()));
@@ -391,12 +368,17 @@ def function_with_docstring():
     """
     pass
 "#;
-        
+
         let interfaces = processor.extract_interfaces(content, Path::new("test.py"));
         assert_eq!(interfaces.len(), 1);
-        
+
         let func = &interfaces[0];
         assert!(func.description.is_some());
-        assert!(func.description.as_ref().unwrap().contains("Function docstring"));
+        assert!(
+            func.description
+                .as_ref()
+                .unwrap()
+                .contains("Function docstring")
+        );
     }
 }

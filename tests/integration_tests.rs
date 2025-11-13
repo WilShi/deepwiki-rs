@@ -1,14 +1,14 @@
+use deepwiki_rs::config::Config;
+use deepwiki_rs::generator::workflow::launch;
 use std::fs;
 use std::path::Path;
 use tempfile::TempDir;
-use deepwiki_rs::config::Config;
-use deepwiki_rs::generator::workflow::launch;
 
 /// 创建一个简单的测试项目
 fn create_test_project(dir: &Path) {
     // 创建 src 目录
     fs::create_dir_all(dir.join("src")).unwrap();
-    
+
     // 创建 Cargo.toml
     let cargo_toml = r#"[package]
 name = "test-project"
@@ -20,7 +20,7 @@ serde = "1.0"
 tokio = "1.0"
 "#;
     fs::write(dir.join("Cargo.toml"), cargo_toml).unwrap();
-    
+
     // 创建 main.rs
     let main_rs = r#"use serde::{Deserialize, Serialize};
 
@@ -64,7 +64,7 @@ fn main() {
 }
 "#;
     fs::write(dir.join("src/main.rs"), main_rs).unwrap();
-    
+
     // 创建 README.md
     let readme = r#"# Test Project
 
@@ -83,10 +83,10 @@ async fn test_full_workflow() {
     // 创建临时目录
     let temp_dir = TempDir::new().unwrap();
     let project_path = temp_dir.path();
-    
+
     // 创建测试项目
     create_test_project(project_path);
-    
+
     // 创建配置
     let mut config = Config::default();
     config.project_path = project_path.to_path_buf();
@@ -94,24 +94,30 @@ async fn test_full_workflow() {
     config.llm.disable_preset_tools = true; // 禁用 LLM 调用
     config.skip_research = true; // 跳过需要 LLM 的研究阶段
     config.skip_documentation = true; // 跳过需要 LLM 的文档生成阶段
-    
+
     // 运行工作流
     let result = launch(&config).await;
-    
+
     // 验证结果 - 在禁用 preset tools 时应该能够跳过 LLM 调用
-    assert!(result.is_ok(), "Workflow should complete successfully with preset tools disabled");
-    
+    assert!(
+        result.is_ok(),
+        "Workflow should complete successfully with preset tools disabled"
+    );
+
     // 验证输出目录
-    assert!(config.output_path.exists(), "Output directory should be created");
+    assert!(
+        config.output_path.exists(),
+        "Output directory should be created"
+    );
 }
 
 #[tokio::test]
 async fn test_skip_preprocessing() {
     let temp_dir = TempDir::new().unwrap();
     let project_path = temp_dir.path();
-    
+
     create_test_project(project_path);
-    
+
     let mut config = Config::default();
     config.project_path = project_path.to_path_buf();
     config.output_path = temp_dir.path().join("output");
@@ -119,9 +125,9 @@ async fn test_skip_preprocessing() {
     config.skip_research = true;
     config.skip_documentation = true;
     config.llm.disable_preset_tools = true;
-    
+
     let result = launch(&config).await;
-    
+
     // 跳过预处理仍然应该能够完成，但可能生成的内容较少
     assert!(result.is_ok());
 }
@@ -130,9 +136,9 @@ async fn test_skip_preprocessing() {
 async fn test_force_regenerate() {
     let temp_dir = TempDir::new().unwrap();
     let project_path = temp_dir.path();
-    
+
     create_test_project(project_path);
-    
+
     let mut config = Config::default();
     config.project_path = project_path.to_path_buf();
     config.output_path = temp_dir.path().join("output");
@@ -140,11 +146,11 @@ async fn test_force_regenerate() {
     config.skip_research = true;
     config.skip_documentation = true;
     config.llm.disable_preset_tools = true;
-    
+
     // 第一次运行
     let result1 = launch(&config).await;
     assert!(result1.is_ok());
-    
+
     // 第二次运行（强制重新生成）
     let result2 = launch(&config).await;
     assert!(result2.is_ok());
@@ -153,11 +159,11 @@ async fn test_force_regenerate() {
 #[test]
 fn test_config_validation() {
     let mut config = Config::default();
-    
+
     // 测试默认值
     assert_eq!(config.project_path, std::path::PathBuf::from("."));
     assert_eq!(config.output_path, std::path::PathBuf::from("./litho.docs"));
-    
+
     // 测试项目路径设置
     let new_path = std::path::PathBuf::from("/test");
     config.project_path = new_path.clone();
@@ -172,13 +178,13 @@ fn test_error_handling() {
     config.skip_research = true;
     config.skip_documentation = true;
     config.llm.disable_preset_tools = true;
-    
+
     // 应该能够处理错误而不崩溃
     let rt = tokio::runtime::Runtime::new().unwrap();
     let result = rt.block_on(launch(&config));
-    
+
     // 可能成功（使用空项目）或失败，但不应该 panic
     match result {
-        Ok(_) | Err(_) => {}, // 两种结果都是可接受的
+        Ok(_) | Err(_) => {} // 两种结果都是可接受的
     }
 }

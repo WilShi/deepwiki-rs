@@ -3,8 +3,8 @@
 use anyhow::Result;
 use rig::completion::{AssistantContent, Message, PromptError};
 
-use super::react::{ReActConfig, ReActResponse};
 use super::providers::ProviderAgent;
+use super::react::{ReActConfig, ReActResponse};
 
 /// ReAct执行器
 pub struct ReActExecutor;

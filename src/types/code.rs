@@ -465,7 +465,10 @@ mod tests {
         let deserialized: InterfaceInfo = serde_json::from_str(&json).unwrap();
 
         assert_eq!(deserialized.name, "User");
-        assert_eq!(deserialized.file_path, Some("src/models/user.rs".to_string()));
+        assert_eq!(
+            deserialized.file_path,
+            Some("src/models/user.rs".to_string())
+        );
         assert_eq!(deserialized.line_number, Some(15));
         assert_eq!(deserialized.fields.len(), 1);
         assert_eq!(deserialized.fields[0].name, "id");

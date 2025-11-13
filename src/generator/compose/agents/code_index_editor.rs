@@ -24,9 +24,7 @@ impl StepForwardAgent for CodeIndexEditor {
 
     fn data_config(&self) -> AgentDataConfig {
         AgentDataConfig {
-            required_sources: vec![
-                DataSource::CODE_INSIGHTS,
-            ],
+            required_sources: vec![DataSource::CODE_INSIGHTS],
             optional_sources: vec![
                 DataSource::ResearchResult("SystemContextResearcher".to_string()),
                 DataSource::ResearchResult("DomainModulesDetector".to_string()),
@@ -200,4 +198,3 @@ impl StepForwardAgent for CodeIndexEditor {
         }
     }
 }
-

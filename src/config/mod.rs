@@ -7,8 +7,7 @@ use std::path::PathBuf;
 use crate::i18n::TargetLanguage;
 
 /// LLM Provider类型
-#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
-#[derive(Default)]
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Default)]
 pub enum LLMProvider {
     #[serde(rename = "openai")]
     #[default]
@@ -26,7 +25,7 @@ pub enum LLMProvider {
     #[serde(rename = "gemini")]
     Gemini,
     #[serde(rename = "ollama")]
-    Ollama
+    Ollama,
 }
 
 impl std::fmt::Display for LLMProvider {
@@ -206,9 +205,10 @@ impl Config {
     pub fn get_project_name(&self) -> String {
         // 优先使用配置的项目名称
         if let Some(ref name) = self.project_name
-            && !name.trim().is_empty() {
-                return name.clone();
-            }
+            && !name.trim().is_empty()
+        {
+            return name.clone();
+        }
 
         // 如果没有配置或配置为空，则自动推断
         self.infer_project_name()
@@ -275,13 +275,16 @@ impl Config {
                         in_package_section = false;
                         continue;
                     }
-                    if in_package_section && line.starts_with("name") && line.contains("=")
-                        && let Some(name_part) = line.split('=').nth(1) {
-                            let name = name_part.trim().trim_matches('"').trim_matches('\'');
-                            if !name.is_empty() {
-                                return Some(name.to_string());
-                            }
+                    if in_package_section
+                        && line.starts_with("name")
+                        && line.contains("=")
+                        && let Some(name_part) = line.split('=').nth(1)
+                    {
+                        let name = name_part.trim().trim_matches('"').trim_matches('\'');
+                        if !name.is_empty() {
+                            return Some(name.to_string());
                         }
+                    }
                 }
             }
             Err(_) => return None,
@@ -352,7 +355,8 @@ impl Config {
                     }
                     if (in_project_section || in_poetry_section)
                         && line.starts_with("name")
-                        && line.contains("=") {
+                        && line.contains("=")
+                    {
                         if let Some(name_part) = line.split('=').nth(1) {
                             let name = name_part.trim().trim_matches('"').trim_matches('\'');
                             if !name.is_empty() {

@@ -1,10 +1,8 @@
-use crate::generator::{
-    step_forward_agent::{
-        AgentDataConfig, DataSource, FormatterConfig, LLMCallMode, PromptTemplate, StepForwardAgent,
-    }
-};
 use crate::generator::research::memory::MemoryScope;
 use crate::generator::research::types::{AgentType, SystemContextReport};
+use crate::generator::step_forward_agent::{
+    AgentDataConfig, DataSource, FormatterConfig, LLMCallMode, PromptTemplate, StepForwardAgent,
+};
 
 /// 项目目标调研员 - 负责分析项目的核心目标、功能价值和系统边界
 #[derive(Default)]

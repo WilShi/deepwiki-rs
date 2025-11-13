@@ -95,10 +95,10 @@ impl StepForwardAgent for BoundaryAnalyzer {
 
         // 2. 提取详细的 API 端点信息
         let api_endpoints = self.extract_api_endpoints(&boundary_insights).await?;
-        
+
         // 3. 格式化边界代码洞察
         let mut formatted_content = self.format_boundary_insights(&boundary_insights);
-        
+
         // 4. 添加详细的 API 端点分析
         if !api_endpoints.is_empty() {
             formatted_content.push_str("#### API 端点详细分析\n\n");
@@ -142,25 +142,22 @@ impl StepForwardAgent for BoundaryAnalyzer {
 /// API 端点信息
 #[derive(Debug, Clone)]
 struct ApiEndpoint {
-    method: String,           // GET, POST, etc.
-    path: String,             // /api/users/:id
-    handler: String,          // 处理函数名
-    file_path: String,        // 定义位置
-    line_number: usize,       // 行号
+    method: String,                 // GET, POST, etc.
+    path: String,                   // /api/users/:id
+    handler: String,                // 处理函数名
+    file_path: String,              // 定义位置
+    line_number: usize,             // 行号
     parameters: Vec<ParameterInfo>, // 参数列表
     return_type: Option<String>,    // 返回类型
     #[allow(dead_code)]
-    framework: Option<String>,      // 框架类型 (Actix, Axum, Rocket等)
+    framework: Option<String>, // 框架类型 (Actix, Axum, Rocket等)
 }
 
 impl BoundaryAnalyzer {
     /// 提取 API 端点信息
-    async fn extract_api_endpoints(
-        &self,
-        insights: &[CodeInsight],
-    ) -> Result<Vec<ApiEndpoint>> {
+    async fn extract_api_endpoints(&self, insights: &[CodeInsight]) -> Result<Vec<ApiEndpoint>> {
         let mut endpoints = Vec::new();
-        
+
         for insight in insights {
             // 只处理 API 和 Controller 类型的代码
             if !matches!(
@@ -169,52 +166,53 @@ impl BoundaryAnalyzer {
             ) {
                 continue;
             }
-            
+
             // 识别 HTTP 框架并提取端点信息
             let source_code = &insight.code_dossier.source_summary;
             if !source_code.is_empty() {
                 let framework = self.detect_http_framework(source_code);
-                
+
                 // 根据不同框架提取端点
                 match framework.as_deref() {
                     Some("actix") => {
                         endpoints.extend(self.extract_actix_endpoints(insight, source_code));
-                    },
+                    }
                     Some("axum") => {
                         endpoints.extend(self.extract_axum_endpoints(insight, source_code));
-                    },
+                    }
                     Some("rocket") => {
                         endpoints.extend(self.extract_rocket_endpoints(insight, source_code));
-                    },
+                    }
                     Some("express") => {
                         endpoints.extend(self.extract_express_endpoints(insight, source_code));
-                    },
+                    }
                     Some("fastapi") => {
                         endpoints.extend(self.extract_fastapi_endpoints(insight, source_code));
-                    },
+                    }
                     Some("spring") => {
                         endpoints.extend(self.extract_spring_endpoints(insight, source_code));
-                    },
+                    }
                     _ => {
                         // 通用模式匹配
                         endpoints.extend(self.extract_generic_endpoints(insight, source_code));
                     }
                 }
             }
-            
+
             // 从 interfaces 中提取函数信息
             for interface in &insight.interfaces {
                 if interface.interface_type == "function" || interface.interface_type == "method" {
-                    if let Some(endpoint) = self.extract_endpoint_from_interface(insight, interface) {
+                    if let Some(endpoint) = self.extract_endpoint_from_interface(insight, interface)
+                    {
                         endpoints.push(endpoint);
                     }
                 }
             }
         }
-        
+
         Ok(endpoints)
     }
-    
+
     /// 检测 HTTP 框架
     fn detect_http_framework(&self, source_code: &str) -> Option<String> {
         if source_code.contains("actix_web") || source_code.contains("HttpServer") {
@@ -233,36 +231,45 @@ impl BoundaryAnalyzer {
             None
         }
     }
-    
+
     /// 从 Actix Web 提取端点
-    fn extract_actix_endpoints(&self, insight: &CodeInsight, source_code: &str) -> Vec<ApiEndpoint> {
+    fn extract_actix_endpoints(
+        &self,
+        insight: &CodeInsight,
+        source_code: &str,
+    ) -> Vec<ApiEndpoint> {
         let mut endpoints = Vec::new();
-        
+
         // 匹配 #[get("/path")] 或 #[post("/path")] 等注解
-        let route_regex = regex::Regex::new(r#"#\[(get|post|put|delete|patch)\s*\(\s*"([^"]+)"\s*\)"#).unwrap();
-        
+        let route_regex =
+            regex::Regex::new(r#"#\[(get|post|put|delete|patch)\s*\(\s*"([^"]+)"\s*\)"#).unwrap();
+
         for captures in route_regex.captures_iter(source_code) {
             let method = captures.get(1).unwrap().as_str().to_uppercase();
             let path = captures.get(2).unwrap().as_str();
-            
+
             // 查找紧接着的函数定义
             let fn_regex = regex::Regex::new(r#"async\s+fn\s+(\w+)\s*\("#).unwrap();
             let remaining = &source_code[captures.get(0).unwrap().end()..];
             if let Some(fn_match) = fn_regex.find(remaining) {
-                let handler = fn_match.as_str().trim()
+                let handler = fn_match
+                    .as_str()
+                    .trim()
                     .replace("async fn ", "")
                     .replace("fn ", "")
                     .split('(')
                     .next()
                     .unwrap_or("")
                     .to_string();
-                
+
                 endpoints.push(ApiEndpoint {
                     method,
                     path: path.to_string(),
                     handler,
                     file_path: insight.code_dossier.file_path.to_string_lossy().to_string(),
-                    line_number: insight.interfaces.first()
+                    line_number: insight
+                        .interfaces
+                        .first()
                         .and_then(|i| i.line_number)
                         .unwrap_or(0),
                     parameters: Vec::new(),
@@ -271,28 +278,33 @@ impl BoundaryAnalyzer {
                 });
             }
         }
-        
+
         endpoints
     }
-    
+
     /// 从 Axum 提取端点
     fn extract_axum_endpoints(&self, insight: &CodeInsight, source_code: &str) -> Vec<ApiEndpoint> {
         let mut endpoints = Vec::new();
-        
+
         // 匹配 .route("/path", get(handler)) 模式
-        let route_regex = regex::Regex::new(r#"\.route\s*\(\s*"([^"]+)"\s*,\s*(get|post|put|delete|patch)\s*\(\s*(\w+)\s*\)"#).unwrap();
-        
+        let route_regex = regex::Regex::new(
+            r#"\.route\s*\(\s*"([^"]+)"\s*,\s*(get|post|put|delete|patch)\s*\(\s*(\w+)\s*\)"#,
+        )
+        .unwrap();
+
         for captures in route_regex.captures_iter(source_code) {
             let path = captures.get(1).unwrap().as_str();
             let method = captures.get(2).unwrap().as_str().to_uppercase();
             let handler = captures.get(3).unwrap().as_str();
-            
+
             endpoints.push(ApiEndpoint {
                 method,
                 path: path.to_string(),
                 handler: handler.to_string(),
                 file_path: insight.code_dossier.file_path.to_string_lossy().to_string(),
-                line_number: insight.interfaces.first()
+                line_number: insight
+                    .interfaces
+                    .first()
                     .and_then(|i| i.line_number)
                     .unwrap_or(0),
                 parameters: Vec::new(),
@@ -300,39 +312,49 @@ impl BoundaryAnalyzer {
                 framework: Some("axum".to_string()),
             });
         }
-        
+
         endpoints
     }
-    
+
     /// 从 Rocket 提取端点
-    fn extract_rocket_endpoints(&self, insight: &CodeInsight, source_code: &str) -> Vec<ApiEndpoint> {
+    fn extract_rocket_endpoints(
+        &self,
+        insight: &CodeInsight,
+        source_code: &str,
+    ) -> Vec<ApiEndpoint> {
         let mut endpoints = Vec::new();
-        
+
         // 匹配 #[route("/path", method = "GET")] 模式
-        let route_regex = regex::Regex::new(r#"#\[route\s*\(\s*"([^"]+)"\s*,\s*method\s*=\s*"([^"]+)"\s*\)"#).unwrap();
-        
+        let route_regex =
+            regex::Regex::new(r#"#\[route\s*\(\s*"([^"]+)"\s*,\s*method\s*=\s*"([^"]+)"\s*\)"#)
+                .unwrap();
+
         for captures in route_regex.captures_iter(source_code) {
             let path = captures.get(1).unwrap().as_str();
             let method = captures.get(2).unwrap().as_str().to_uppercase();
-            
+
             // 查找紧接着的函数定义
             let fn_regex = regex::Regex::new(r#"async\s+fn\s+(\w+)\s*\("#).unwrap();
             let remaining = &source_code[captures.get(0).unwrap().end()..];
             if let Some(fn_match) = fn_regex.find(remaining) {
-                let handler = fn_match.as_str().trim()
+                let handler = fn_match
+                    .as_str()
+                    .trim()
                     .replace("async fn ", "")
                     .replace("fn ", "")
                     .split('(')
                     .next()
                     .unwrap_or("")
                     .to_string();
-                
+
                 endpoints.push(ApiEndpoint {
                     method,
                     path: path.to_string(),
                     handler,
                     file_path: insight.code_dossier.file_path.to_string_lossy().to_string(),
-                    line_number: insight.interfaces.first()
+                    line_number: insight
+                        .interfaces
+                        .first()
                         .and_then(|i| i.line_number)
                         .unwrap_or(0),
                     parameters: Vec::new(),
@@ -341,28 +363,37 @@ impl BoundaryAnalyzer {
                 });
             }
         }
-        
+
         endpoints
     }
-    
+
     /// 从 Express.js 提取端点
-    fn extract_express_endpoints(&self, insight: &CodeInsight, source_code: &str) -> Vec<ApiEndpoint> {
+    fn extract_express_endpoints(
+        &self,
+        insight: &CodeInsight,
+        source_code: &str,
+    ) -> Vec<ApiEndpoint> {
         let mut endpoints = Vec::new();
-        
+
         // 匹配 app.get('/path', handler) 模式
-        let route_regex = regex::Regex::new(r#"app\.(get|post|put|delete|patch)\s*\(\s*['"]([^'"]+)['"]\s*,\s*(\w+)"#).unwrap();
-        
+        let route_regex = regex::Regex::new(
+            r#"app\.(get|post|put|delete|patch)\s*\(\s*['"]([^'"]+)['"]\s*,\s*(\w+)"#,
+        )
+        .unwrap();
+
         for captures in route_regex.captures_iter(source_code) {
             let method = captures.get(1).unwrap().as_str().to_uppercase();
             let path = captures.get(2).unwrap().as_str();
             let handler = captures.get(3).unwrap().as_str();
-            
+
             endpoints.push(ApiEndpoint {
                 method,
                 path: path.to_string(),
                 handler: handler.to_string(),
                 file_path: insight.code_dossier.file_path.to_string_lossy().to_string(),
-                line_number: insight.interfaces.first()
+                line_number: insight
+                    .interfaces
+                    .first()
                     .and_then(|i| i.line_number)
                     .unwrap_or(0),
                 parameters: Vec::new(),
@@ -370,39 +401,49 @@ impl BoundaryAnalyzer {
                 framework: Some("express".to_string()),
             });
         }
-        
+
         endpoints
     }
-    
+
     /// 从 FastAPI 提取端点
-    fn extract_fastapi_endpoints(&self, insight: &CodeInsight, source_code: &str) -> Vec<ApiEndpoint> {
+    fn extract_fastapi_endpoints(
+        &self,
+        insight: &CodeInsight,
+        source_code: &str,
+    ) -> Vec<ApiEndpoint> {
         let mut endpoints = Vec::new();
-        
+
         // 匹配 @app.get("/path") 模式
-        let route_regex = regex::Regex::new(r#"@app\.(get|post|put|delete|patch)\s*\(\s*"([^"]+)"\s*\)"#).unwrap();
-        
+        let route_regex =
+            regex::Regex::new(r#"@app\.(get|post|put|delete|patch)\s*\(\s*"([^"]+)"\s*\)"#)
+                .unwrap();
+
         for captures in route_regex.captures_iter(source_code) {
             let method = captures.get(1).unwrap().as_str().to_uppercase();
             let path = captures.get(2).unwrap().as_str();
-            
+
             // 查找紧接着的函数定义
             let fn_regex = regex::Regex::new(r#"async\s+def\s+(\w+)\s*\("#).unwrap();
             let remaining = &source_code[captures.get(0).unwrap().end()..];
             if let Some(fn_match) = fn_regex.find(remaining) {
-                let handler = fn_match.as_str().trim()
+                let handler = fn_match
+                    .as_str()
+                    .trim()
                     .replace("async def ", "")
                     .replace("def ", "")
                     .split('(')
                     .next()
                     .unwrap_or("")
                     .to_string();
-                
+
                 endpoints.push(ApiEndpoint {
                     method,
                     path: path.to_string(),
                     handler,
                     file_path: insight.code_dossier.file_path.to_string_lossy().to_string(),
-                    line_number: insight.interfaces.first()
+                    line_number: insight
+                        .interfaces
+                        .first()
                         .and_then(|i| i.line_number)
                         .unwrap_or(0),
                     parameters: Vec::new(),
@@ -411,26 +452,41 @@ impl BoundaryAnalyzer {
                 });
             }
         }
-        
+
         endpoints
     }
-    
+
     /// 从 Spring Boot 提取端点
-    fn extract_spring_endpoints(&self, insight: &CodeInsight, source_code: &str) -> Vec<ApiEndpoint> {
+    fn extract_spring_endpoints(
+        &self,
+        insight: &CodeInsight,
+        source_code: &str,
+    ) -> Vec<ApiEndpoint> {
         let mut endpoints = Vec::new();
-        
+
         // 匹配 @GetMapping("/path") 或 @PostMapping("/path") 模式
-        let route_regex = regex::Regex::new(r#"@(Get|Post|Put|Delete|Patch)Mapping\s*\(\s*"([^"]+)"\s*\)"#).unwrap();
-        
+        let route_regex =
+            regex::Regex::new(r#"@(Get|Post|Put|Delete|Patch)Mapping\s*\(\s*"([^"]+)"\s*\)"#)
+                .unwrap();
+
         for captures in route_regex.captures_iter(source_code) {
-            let method = captures.get(1).unwrap().as_str().replace("Mapping", "").to_uppercase();
+            let method = captures
+                .get(1)
+                .unwrap()
+                .as_str()
+                .replace("Mapping", "")
+                .to_uppercase();
             let path = captures.get(2).unwrap().as_str();
-            
+
             // 查找紧接着的方法定义
-            let method_regex = regex::Regex::new(r#"(?:public\s+)?(?:ResponseEntity<\w+>\s+)?(\w+)\s*\("#).unwrap();
+            let method_regex =
+                regex::Regex::new(r#"(?:public\s+)?(?:ResponseEntity<\w+>\s+)?(\w+)\s*\("#)
+                    .unwrap();
             let remaining = &source_code[captures.get(0).unwrap().end()..];
             if let Some(method_match) = method_regex.find(remaining) {
-                let handler = method_match.as_str().trim()
+                let handler = method_match
+                    .as_str()
+                    .trim()
                     .split('(')
                     .next()
                     .unwrap_or("")
@@ -438,13 +494,15 @@ impl BoundaryAnalyzer {
                     .last()
                     .unwrap_or("")
                     .to_string();
-                
+
                 endpoints.push(ApiEndpoint {
                     method,
                     path: path.to_string(),
                     handler,
                     file_path: insight.code_dossier.file_path.to_string_lossy().to_string(),
-                    line_number: insight.interfaces.first()
+                    line_number: insight
+                        .interfaces
+                        .first()
                         .and_then(|i| i.line_number)
                         .unwrap_or(0),
                     parameters: Vec::new(),
@@ -453,17 +511,21 @@ impl BoundaryAnalyzer {
                 });
             }
         }
-        
+
         endpoints
     }
-    
+
     /// 通用端点提取（当无法识别框架时）
-    fn extract_generic_endpoints(&self, insight: &CodeInsight, source_code: &str) -> Vec<ApiEndpoint> {
+    fn extract_generic_endpoints(
+        &self,
+        insight: &CodeInsight,
+        source_code: &str,
+    ) -> Vec<ApiEndpoint> {
         let mut endpoints = Vec::new();
-        
+
         // 通用 HTTP 方法模式
         let http_methods = ["GET", "POST", "PUT", "DELETE", "PATCH"];
-        
+
         for method in &http_methods {
             let pattern = format!(r#"{}\s*/([^/\s]+)"#, method);
             if let Some(re) = regex::Regex::new(&pattern).ok() {
@@ -474,7 +536,9 @@ impl BoundaryAnalyzer {
                             path: format!("/{}", path_match.as_str()),
                             handler: "unknown".to_string(),
                             file_path: insight.code_dossier.file_path.to_string_lossy().to_string(),
-                            line_number: insight.interfaces.first()
+                            line_number: insight
+                                .interfaces
+                                .first()
                                 .and_then(|i| i.line_number)
                                 .unwrap_or(0),
                             parameters: Vec::new(),
@@ -485,20 +549,24 @@ impl BoundaryAnalyzer {
                 }
             }
         }
-        
+
         endpoints
     }
-    
+
     /// 从接口信息中提取端点
-    fn extract_endpoint_from_interface(&self, _insight: &CodeInsight, interface: &crate::types::code::InterfaceInfo) -> Option<ApiEndpoint> {
+    fn extract_endpoint_from_interface(
+        &self,
+        _insight: &CodeInsight,
+        interface: &crate::types::code::InterfaceInfo,
+    ) -> Option<ApiEndpoint> {
         // 如果函数名包含常见的 HTTP 方法，可能是端点
         let http_methods = ["get_", "post_", "put_", "delete_", "patch_"];
-        
+
         for method_prefix in &http_methods {
             if interface.name.starts_with(method_prefix) {
                 let method = method_prefix.replace('_', "").to_uppercase();
                 let path = format!("/{}", interface.name.replace(method_prefix, ""));
-                
+
                 return Some(ApiEndpoint {
                     method,
                     path,
@@ -511,10 +579,10 @@ impl BoundaryAnalyzer {
                 });
             }
         }
-        
+
         None
     }
-    
+
     /// 筛选边界相关的代码洞察
     async fn filter_boundary_code_insights(
         &self,

@@ -237,7 +237,8 @@ impl ReactProcessor {
     /// 提取类组件名称
     fn extract_class_component(&self, line: &str) -> Option<String> {
         if line.contains("class")
-            && (line.contains("extends React.Component") || line.contains("extends Component")) {
+            && (line.contains("extends React.Component") || line.contains("extends Component"))
+        {
             if let Some(class_pos) = line.find("class") {
                 let after_class = &line[class_pos + 5..].trim();
                 if let Some(space_pos) = after_class.find(' ') {
