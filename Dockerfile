@@ -25,7 +25,7 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Create app user
-RUN useradd -m -u deepwiki
+RUN useradd -m deepwiki
 
 # Copy the binary from builder
 COPY --from=builder /app/target/release/deepwiki-rs /usr/local/bin/
