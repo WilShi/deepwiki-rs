@@ -46,7 +46,6 @@ jobs:
         cp target/x86_64-apple-darwin/release/deepwiki-rs dmg/deepwiki-rs
         create-dmg \
           --volname "DeepWiki-RS" \
-          --volicon "icon.icns" \
           --window-pos 200 120 \
           --window-size 600 400 \
           --icon-size 100 \
