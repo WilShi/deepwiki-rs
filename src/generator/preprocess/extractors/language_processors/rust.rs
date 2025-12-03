@@ -14,6 +14,12 @@ pub struct RustProcessor {
     enum_regex: Regex,
 }
 
+impl Default for RustProcessor {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl RustProcessor {
     pub fn new() -> Self {
         Self {
@@ -42,40 +48,40 @@ impl LanguageProcessor for RustProcessor {
 
         for (line_num, line) in content.lines().enumerate() {
             // 提取use语句
-            if let Some(captures) = self.use_regex.captures(line) {
-                if let Some(use_path) = captures.get(1) {
-                    let use_str = use_path.as_str().trim();
-                    let is_external = !use_str.starts_with("crate::")
-                        && !use_str.starts_with("super::")
-                        && !use_str.starts_with("self::");
+            if let Some(captures) = self.use_regex.captures(line)
+                && let Some(use_path) = captures.get(1)
+            {
+                let use_str = use_path.as_str().trim();
+                let is_external = !use_str.starts_with("crate::")
+                    && !use_str.starts_with("super::")
+                    && !use_str.starts_with("self::");
 
-                    // 解析依赖名称
-                    let dependency_name = self.extract_dependency_name(use_str);
+                // 解析依赖名称
+                let dependency_name = self.extract_dependency_name(use_str);
 
-                    dependencies.push(Dependency {
-                        name: dependency_name,
-                        path: Some(source_file.clone()),
-                        is_external,
-                        line_number: Some(line_num + 1),
-                        dependency_type: "use".to_string(),
-                        version: None,
-                    });
-                }
+                dependencies.push(Dependency {
+                    name: dependency_name,
+                    path: Some(source_file.clone()),
+                    is_external,
+                    line_number: Some(line_num + 1),
+                    dependency_type: "use".to_string(),
+                    version: None,
+                });
             }
 
             // 提取mod语句
-            if let Some(captures) = self.mod_regex.captures(line) {
-                if let Some(mod_name) = captures.get(1) {
-                    let mod_str = mod_name.as_str().trim();
-                    dependencies.push(Dependency {
-                        name: mod_str.to_string(),
-                        path: Some(source_file.clone()),
-                        is_external: false,
-                        line_number: Some(line_num + 1),
-                        dependency_type: "mod".to_string(),
-                        version: None,
-                    });
-                }
+            if let Some(captures) = self.mod_regex.captures(line)
+                && let Some(mod_name) = captures.get(1)
+            {
+                let mod_str = mod_name.as_str().trim();
+                dependencies.push(Dependency {
+                    name: mod_str.to_string(),
+                    path: Some(source_file.clone()),
+                    is_external: false,
+                    line_number: Some(line_num + 1),
+                    dependency_type: "mod".to_string(),
+                    version: None,
+                });
             }
         }
 
@@ -168,7 +174,7 @@ impl LanguageProcessor for RustProcessor {
     fn extract_interfaces(&self, content: &str, file_path: &Path) -> Vec<InterfaceInfo> {
         // 🆕 首先尝试使用 syn 进行深度解析
         if let Ok(syntax) = syn::parse_file(content) {
-            return self.extract_interfaces_with_syn(&syntax, file_path);
+            return self.extract_interfaces_with_syn(&syntax, file_path, content);
         }
 
         // 如果 syn 解析失败（语法错误），降级到正则表达式解析
@@ -236,15 +242,15 @@ impl RustProcessor {
     /// 从use路径中提取依赖名称
     fn extract_dependency_name(&self, use_path: &str) -> String {
         // 处理复杂的use语句，如 use crate::{module1, module2}
-        if use_path.contains('{') && use_path.contains('}') {
-            if let Some(start) = use_path.find('{') {
-                if let Some(end) = use_path.find('}') {
-                    let inner = &use_path[start + 1..end];
-                    // 返回第一个模块名
-                    if let Some(first_module) = inner.split(',').next() {
-                        return first_module.trim().to_string();
-                    }
-                }
+        if use_path.contains('{')
+            && use_path.contains('}')
+            && let Some(start) = use_path.find('{')
+            && let Some(end) = use_path.find('}')
+        {
+            let inner = &use_path[start + 1..end];
+            // 返回第一个模块名
+            if let Some(first_module) = inner.split(',').next() {
+                return first_module.trim().to_string();
             }
         }
 
@@ -272,6 +278,7 @@ impl RustProcessor {
         &self,
         syntax: &syn::File,
         file_path: &Path,
+        content: &str,
     ) -> Vec<InterfaceInfo> {
         let mut interfaces = Vec::new();
         let file_path_str = file_path.to_string_lossy().to_string();
@@ -280,23 +287,23 @@ impl RustProcessor {
         for item in &syntax.items {
             match item {
                 syn::Item::Fn(item_fn) => {
-                    let interface = self.extract_function_info(item_fn, &file_path_str);
+                    let interface = self.extract_function_info(item_fn, &file_path_str, content);
                     interfaces.push(interface);
                 }
                 syn::Item::Struct(item_struct) => {
-                    let interface = self.extract_struct_info(item_struct, &file_path_str);
+                    let interface = self.extract_struct_info(item_struct, &file_path_str, content);
                     interfaces.push(interface);
                 }
                 syn::Item::Enum(item_enum) => {
-                    let interface = self.extract_enum_info(item_enum, &file_path_str);
+                    let interface = self.extract_enum_info(item_enum, &file_path_str, content);
                     interfaces.push(interface);
                 }
                 syn::Item::Trait(item_trait) => {
-                    let interface = self.extract_trait_info(item_trait, &file_path_str);
+                    let interface = self.extract_trait_info(item_trait, &file_path_str, content);
                     interfaces.push(interface);
                 }
                 syn::Item::Impl(item_impl) => {
-                    if let Some(interface) = self.extract_impl_info(item_impl, &file_path_str) {
+                    if let Some(interface) = self.extract_impl_info(item_impl, &file_path_str, content) {
                         interfaces.push(interface);
                     }
                 }
@@ -305,6 +312,21 @@ impl RustProcessor {
         }
 
         interfaces
+    }
+
+    /// 🆕 在源代码中查找项目的行号
+    /// 通过搜索项目名称和类型关键字来定位
+    fn find_item_line_number(&self, content: &str, name: &str, keywords: &[&str]) -> Option<usize> {
+        for (line_num, line) in content.lines().enumerate() {
+            let line_trimmed = line.trim();
+            // 检查行是否包含任意关键字和项目名称
+            for keyword in keywords {
+                if line_trimmed.contains(keyword) && line_trimmed.contains(name) {
+                    return Some(line_num + 1);
+                }
+            }
+        }
+        None
     }
 
     /// 🆕 使用正则表达式进行基础解析（降级方案）
@@ -472,7 +494,7 @@ impl RustProcessor {
     }
 
     /// 🆕 提取函数信息（使用 syn）
-    fn extract_function_info(&self, item_fn: &syn::ItemFn, file_path: &str) -> InterfaceInfo {
+    fn extract_function_info(&self, item_fn: &syn::ItemFn, file_path: &str, content: &str) -> InterfaceInfo {
         let name = item_fn.sig.ident.to_string();
         let visibility = if matches!(item_fn.vis, syn::Visibility::Public(_)) {
             "public"
@@ -522,7 +544,7 @@ impl RustProcessor {
         let description = self.extract_doc_attrs(&item_fn.attrs);
 
         let mut interface = InterfaceInfo::new(
-            name,
+            name.clone(),
             interface_type.to_string(),
             visibility.to_string(),
             parameters,
@@ -532,14 +554,20 @@ impl RustProcessor {
 
         // 设置文件路径和行号
         interface.file_path = Some(file_path.to_string());
-        // TODO: 修复行号获取 - proc_macro2::Span API 变化
-        // interface.line_number = item_fn.span().line();
+        // 🆕 使用辅助函数查找行号
+        interface.line_number = self.find_item_line_number(
+            content,
+            &name,
+            &["fn ", "async fn "],
+        );
+        // 🆕 设置源代码片段
+        interface.source_code = Some(quote::quote!(#item_fn.sig).to_string());
 
         interface
     }
 
     /// 🆕 提取结构体信息（使用 syn）
-    fn extract_struct_info(&self, item_struct: &syn::ItemStruct, file_path: &str) -> InterfaceInfo {
+    fn extract_struct_info(&self, item_struct: &syn::ItemStruct, file_path: &str, content: &str) -> InterfaceInfo {
         let name = item_struct.ident.to_string();
         let visibility = if matches!(item_struct.vis, syn::Visibility::Public(_)) {
             "public"
@@ -575,7 +603,7 @@ impl RustProcessor {
         let description = self.extract_doc_attrs(&item_struct.attrs);
 
         let mut interface = InterfaceInfo::new(
-            name,
+            name.clone(),
             "struct".to_string(),
             visibility.to_string(),
             Vec::new(),
@@ -585,15 +613,21 @@ impl RustProcessor {
 
         // 设置文件路径、行号和字段
         interface.file_path = Some(file_path.to_string());
-        // TODO: 修复行号获取
-        // interface.line_number = item_struct.span().line();
+        // 🆕 使用辅助函数查找行号
+        interface.line_number = self.find_item_line_number(
+            content,
+            &name,
+            &["struct "],
+        );
         interface.fields = fields;
+        // 🆕 设置源代码片段
+        interface.source_code = Some(quote::quote!(#item_struct).to_string());
 
         interface
     }
 
     /// 🆕 提取枚举信息（使用 syn）
-    fn extract_enum_info(&self, item_enum: &syn::ItemEnum, file_path: &str) -> InterfaceInfo {
+    fn extract_enum_info(&self, item_enum: &syn::ItemEnum, file_path: &str, content: &str) -> InterfaceInfo {
         let name = item_enum.ident.to_string();
         let visibility = if matches!(item_enum.vis, syn::Visibility::Public(_)) {
             "public"
@@ -644,7 +678,7 @@ impl RustProcessor {
         let description = self.extract_doc_attrs(&item_enum.attrs);
 
         let mut interface = InterfaceInfo::new(
-            name,
+            name.clone(),
             "enum".to_string(),
             visibility.to_string(),
             Vec::new(),
@@ -654,15 +688,21 @@ impl RustProcessor {
 
         // 设置文件路径、行号和变体
         interface.file_path = Some(file_path.to_string());
-        // TODO: 修复行号获取
-        // interface.line_number = item_enum.span().line();
+        // 🆕 使用辅助函数查找行号
+        interface.line_number = self.find_item_line_number(
+            content,
+            &name,
+            &["enum "],
+        );
         interface.variants = variants;
+        // 🆕 设置源代码片段
+        interface.source_code = Some(quote::quote!(#item_enum).to_string());
 
         interface
     }
 
     /// 🆕 提取特征信息（使用 syn）
-    fn extract_trait_info(&self, item_trait: &syn::ItemTrait, file_path: &str) -> InterfaceInfo {
+    fn extract_trait_info(&self, item_trait: &syn::ItemTrait, file_path: &str, content: &str) -> InterfaceInfo {
         let name = item_trait.ident.to_string();
         let visibility = if matches!(item_trait.vis, syn::Visibility::Public(_)) {
             "public"
@@ -674,7 +714,7 @@ impl RustProcessor {
         let description = self.extract_doc_attrs(&item_trait.attrs);
 
         let mut interface = InterfaceInfo::new(
-            name,
+            name.clone(),
             "trait".to_string(),
             visibility.to_string(),
             Vec::new(),
@@ -684,8 +724,12 @@ impl RustProcessor {
 
         // 设置文件路径和行号
         interface.file_path = Some(file_path.to_string());
-        // TODO: 修复行号获取
-        // interface.line_number = item_trait.span().line();
+        // 🆕 使用辅助函数查找行号
+        interface.line_number = self.find_item_line_number(
+            content,
+            &name,
+            &["trait "],
+        );
 
         interface
     }
@@ -695,26 +739,22 @@ impl RustProcessor {
         &self,
         item_impl: &syn::ItemImpl,
         file_path: &str,
+        content: &str,
     ) -> Option<InterfaceInfo> {
-        // 只处理 trait 实现（impl 块没有 visibility 字段）
-        // if item_impl.trait_.is_none() {
-        //     return None;
-        // }
-
-        let type_name = self.type_to_string(&*item_impl.self_ty);
+        let type_name = self.type_to_string(&item_impl.self_ty);
 
         let name = if let Some((_, trait_path, _)) = &item_impl.trait_ {
             let trait_name = self.path_to_string(trait_path);
             format!("{} for {}", trait_name, type_name)
         } else {
-            type_name
+            type_name.clone()
         };
 
         // 提取文档注释
         let description = self.extract_doc_attrs(&item_impl.attrs);
 
         let mut interface = InterfaceInfo::new(
-            name,
+            name.clone(),
             "implementation".to_string(),
             "public".to_string(),
             Vec::new(),
@@ -724,8 +764,12 @@ impl RustProcessor {
 
         // 设置文件路径和行号
         interface.file_path = Some(file_path.to_string());
-        // TODO: 修复行号获取
-        // interface.line_number = item_impl.span().line();
+        // 🆕 使用辅助函数查找行号 (搜索 impl)
+        interface.line_number = self.find_item_line_number(
+            content,
+            &type_name,
+            &["impl "],
+        );
 
         Some(interface)
     }

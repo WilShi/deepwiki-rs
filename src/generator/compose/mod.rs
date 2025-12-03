@@ -14,15 +14,16 @@ pub mod memory;
 pub mod types;
 
 /// 执行文档生成阶段
-pub async fn execute(context: &GeneratorContext) -> Result<()> {
+pub async fn execute(context: &GeneratorContext) -> Result<DocTree> {
     if context.config.llm.disable_preset_tools {
         println!("   ⚠️ LLM已禁用，跳过文档生成阶段");
-        return Ok(());
+        return Ok(DocTree::new(&context.config.target_language));
     }
 
     let mut doc_tree = DocTree::new(&context.config.target_language);
-    let composer = DocumentationComposer::default();
-    composer.execute(context, &mut doc_tree).await
+    let composer = DocumentationComposer;
+    composer.execute(context, &mut doc_tree).await?;
+    Ok(doc_tree)
 }
 
 /// 文档生成器
@@ -37,13 +38,13 @@ impl DocumentationComposer {
             context.config.target_language.display_name()
         );
 
-        let overview_editor = OverviewEditor::default();
+        let overview_editor = OverviewEditor;
         overview_editor.execute(context).await?;
 
-        let architecture_editor = ArchitectureEditor::default();
+        let architecture_editor = ArchitectureEditor;
         architecture_editor.execute(context).await?;
 
-        let workflow_editor = WorkflowEditor::default();
+        let workflow_editor = WorkflowEditor;
         workflow_editor.execute(context).await?;
 
         let key_modules_insight_editor = KeyModulesInsightEditor::default();
@@ -51,10 +52,10 @@ impl DocumentationComposer {
             .execute(context, doc_tree)
             .await?;
 
-        let boundary_editor = BoundaryEditor::default();
+        let boundary_editor = BoundaryEditor;
         boundary_editor.execute(context).await?;
 
-        let code_index_editor = CodeIndexEditor::default();
+        let code_index_editor = CodeIndexEditor;
         code_index_editor.execute(context).await?;
 
         Ok(())

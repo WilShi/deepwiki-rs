@@ -1,9 +1,10 @@
 use serde::{Deserialize, Serialize};
 
 /// 目标语言类型
-#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Default)]
 pub enum TargetLanguage {
     #[serde(rename = "zh")]
+    #[default]
     Chinese,
     #[serde(rename = "en")]
     English,
@@ -17,12 +18,6 @@ pub enum TargetLanguage {
     French,
     #[serde(rename = "ru")]
     Russian,
-}
-
-impl Default for TargetLanguage {
-    fn default() -> Self {
-        Self::Chinese
-    }
 }
 
 impl std::fmt::Display for TargetLanguage {
@@ -137,6 +132,7 @@ impl TargetLanguage {
                 "architecture" => "2、架构概览.md".to_string(),
                 "workflow" => "3、工作流程.md".to_string(),
                 "boundary" => "5、边界调用.md".to_string(),
+                "code_index" => "6、代码索引.md".to_string(),
                 _ => format!("{}.md", doc_type),
             },
             TargetLanguage::English => match doc_type {
@@ -144,6 +140,7 @@ impl TargetLanguage {
                 "architecture" => "2.Architecture.md".to_string(),
                 "workflow" => "3.Workflow.md".to_string(),
                 "boundary" => "5.Boundary-Interfaces.md".to_string(),
+                "code_index" => "6.Code-Index.md".to_string(),
                 _ => format!("{}.md", doc_type),
             },
             TargetLanguage::Japanese => match doc_type {
@@ -151,6 +148,7 @@ impl TargetLanguage {
                 "architecture" => "2-アーキテクチャ概要.md".to_string(),
                 "workflow" => "3-ワークフロー.md".to_string(),
                 "boundary" => "5-境界インターフェース.md".to_string(),
+                "code_index" => "6-コードインデックス.md".to_string(),
                 _ => format!("{}.md", doc_type),
             },
             TargetLanguage::Korean => match doc_type {
@@ -158,6 +156,7 @@ impl TargetLanguage {
                 "architecture" => "2-아키텍처-개요.md".to_string(),
                 "workflow" => "3-워크플로우.md".to_string(),
                 "boundary" => "5-경계-인터페이스.md".to_string(),
+                "code_index" => "6-코드-인덱스.md".to_string(),
                 _ => format!("{}.md", doc_type),
             },
             TargetLanguage::German => match doc_type {
@@ -165,6 +164,7 @@ impl TargetLanguage {
                 "architecture" => "2-Architekturübersicht.md".to_string(),
                 "workflow" => "3-Arbeitsablauf.md".to_string(),
                 "boundary" => "5-Grenzschnittstellen.md".to_string(),
+                "code_index" => "6-Code-Index.md".to_string(),
                 _ => format!("{}.md", doc_type),
             },
             TargetLanguage::French => match doc_type {
@@ -172,6 +172,7 @@ impl TargetLanguage {
                 "architecture" => "2-Aperçu-de-l'Architecture.md".to_string(),
                 "workflow" => "3-Flux-de-Travail.md".to_string(),
                 "boundary" => "5-Interfaces-de-Frontière.md".to_string(),
+                "code_index" => "6-Index-de-Code.md".to_string(),
                 _ => format!("{}.md", doc_type),
             },
             TargetLanguage::Russian => match doc_type {
@@ -179,6 +180,7 @@ impl TargetLanguage {
                 "architecture" => "2-Обзор-Архитектуры.md".to_string(),
                 "workflow" => "3-Рабочий-Процесс.md".to_string(),
                 "boundary" => "5-Граничные-Интерфейсы.md".to_string(),
+                "code_index" => "6-Индекс-Кода.md".to_string(),
                 _ => format!("{}.md", doc_type),
             },
         }

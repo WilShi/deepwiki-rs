@@ -188,15 +188,66 @@ sequenceDiagram
 
 请基于调研材料生成一份符合以上要求的高质量且详细细致的核心工作流程说明文档。
 
+### 6. 代码调用链示例要求 ⭐ 重要
+
+**每个核心工作流程都应包含完整的代码调用链示例**：
+
+```markdown
+## 工作流程名称
+
+📁 **入口点**: `src/module/file.rs:行号`
+
+**完整调用链示例**：
+```rust
+// 示例：用户注册完整流程
+async fn register_user_workflow(
+    username: String,
+    email: String
+) -> Result<User> {
+    // 1. 验证输入 (src/validation/mod.rs:23)
+    validate_username(&username)?;
+    validate_email(&email)?;
+    
+    // 2. 检查用户是否存在 (src/repositories/user_repo.rs:45)
+    if user_repo.exists_by_username(&username).await? {
+        return Err(Error::UserAlreadyExists);
+    }
+    
+    // 3. 创建用户对象 (src/models/user.rs:67)
+    let user = User::new(username, email);
+    
+    // 4. 保存到数据库 (src/repositories/user_repo.rs:89)
+    let saved_user = user_repo.save(&user).await?;
+    
+    // 5. 发送欢迎邮件 (src/services/email_service.rs:12)
+    email_service.send_welcome_email(&saved_user).await?;
+    
+    Ok(saved_user)
+}
+```
+
+**错误处理示例**：
+```rust
+match register_user_workflow(username, email).await {
+    Ok(user) => println!("注册成功: {:?}", user),
+    Err(Error::UserAlreadyExists) => eprintln!("用户名已存在"),
+    Err(Error::InvalidEmail) => eprintln!("邮箱格式错误"),
+    Err(e) => eprintln!("注册失败: {}", e),
+}
+```
+```
+
 ## 质量检查清单
 
 在输出文档前，请确认:
 - [ ] 每个主要流程都有 📁 入口文件路径和行号
 - [ ] 关键函数调用都标注了完整的调用链路
 - [ ] 至少 5 个核心流程有详细的时序图或流程图
-- [] 流程图中的每个节点都标注了代码位置
+- [ ] 流程图中的每个节点都标注了代码位置
 - [ ] 文档包含异常处理和恢复机制的代码位置
-- [ ] 调用链清晰展示了模块间的交互关系"#.to_string(),
+- [ ] 调用链清晰展示了模块间的交互关系
+- [ ] **核心流程包含完整的代码调用链示例** ⭐ 新增
+- [ ] **代码示例包含错误处理** ⭐ 新增"#.to_string(),
 
             llm_call_mode: LLMCallMode::PromptWithTools,
             formatter_config: FormatterConfig::default(),

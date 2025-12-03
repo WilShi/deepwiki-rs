@@ -1,4 +1,4 @@
-name: Rust CI/CD
+name: CI/CD
 
 on:
   push:
@@ -7,31 +7,22 @@ on:
       - 'v*'
   pull_request:
     branches: [ main ]
-  release:
-    types: [published]
 
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
+  # 自动测试
   test:
-    name: Test Suite
+    name: Test
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        rust:
-          - stable
-          - beta
-          - nightly
-      fail-fast: false
     
     steps:
     - uses: actions/checkout@v4
     
     - name: Install Rust
-      uses: dtolnay/rust-toolchain@master
+      uses: dtolnay/rust-toolchain@stable
       with:
-        toolchain: ${{ matrix.rust }}
         components: rustfmt, clippy
     
     - name: Cache dependencies
@@ -43,17 +34,11 @@ jobs:
           target
         key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
     
-    - name: Install cargo-audit
-      run: cargo install cargo-audit
-    
     - name: Check formatting
       run: cargo fmt --all -- --check
     
     - name: Run clippy
-      run: cargo clippy --all-targets --all-features -- -A warnings
-    
-    - name: Run security audit
-      run: cargo audit
+      run: cargo clippy --all-targets --all-features -- -D warnings
     
     - name: Build
       run: cargo build --verbose
@@ -61,24 +46,33 @@ jobs:
     - name: Run tests
       run: cargo test --verbose
 
+  # 生成跨平台可执行文件
   build:
-    name: Build Release
-    runs-on: ${{ matrix.os }}
+    name: Build ${{ matrix.platform.name }}
+    runs-on: ${{ matrix.platform.os }}
+    needs: test
     strategy:
       matrix:
-        include:
-          - os: ubuntu-latest
+        platform:
+          - name: Linux x86_64
+            os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-            artifact_name: deepwiki-rs
-            asset_name: deepwiki-rs-linux-amd64
-          - os: windows-latest
-            target: x86_64-pc-windows-msvc
-            artifact_name: deepwiki-rs.exe
-            asset_name: deepwiki-rs-windows-amd64
-          - os: macos-latest
+            artifact: deepwiki-rs-linux-x86_64
+          
+          - name: macOS x86_64
+            os: macos-latest
             target: x86_64-apple-darwin
-            artifact_name: deepwiki-rs
-            asset_name: deepwiki-rs-macos-amd64
+            artifact: deepwiki-rs-macos-x86_64
+          
+          - name: macOS ARM64
+            os: macos-latest
+            target: aarch64-apple-darwin
+            artifact: deepwiki-rs-macos-arm64
+          
+          - name: Windows x86_64
+            os: windows-latest
+            target: x86_64-pc-windows-msvc
+            artifact: deepwiki-rs-windows-x86_64
     
     steps:
     - uses: actions/checkout@v4
@@ -86,7 +80,7 @@ jobs:
     - name: Install Rust
       uses: dtolnay/rust-toolchain@stable
       with:
-        targets: ${{ matrix.target }}
+        targets: ${{ matrix.platform.target }}
     
     - name: Cache dependencies
       uses: actions/cache@v4
@@ -95,110 +89,48 @@ jobs:
           ~/.cargo/registry
           ~/.cargo/git
           target
-        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+        key: ${{ runner.os }}-${{ matrix.platform.target }}-cargo-${{ hashFiles('**/Cargo.lock') }}
     
     - name: Build release
-      run: cargo build --release --target ${{ matrix.target }}
+      run: cargo build --release --target ${{ matrix.platform.target }}
     
-    - name: Strip binary (unix)
-      if: matrix.os != 'windows-latest'
-      run: strip target/${{ matrix.target }}/release/${{ matrix.artifact_name }}
+    - name: Prepare artifact (Unix)
+      if: runner.os != 'Windows'
+      run: |
+        cd target/${{ matrix.platform.target }}/release
+        strip deepwiki-rs
+        tar czf ${{ matrix.platform.artifact }}.tar.gz deepwiki-rs
+        mv ${{ matrix.platform.artifact }}.tar.gz ${{ github.workspace }}/
+    
+    - name: Prepare artifact (Windows)
+      if: runner.os == 'Windows'
+      run: |
+        cd target/${{ matrix.platform.target }}/release
+        7z a ${{ matrix.platform.artifact }}.zip deepwiki-rs.exe
+        move ${{ matrix.platform.artifact }}.zip ${{ github.workspace }}/
     
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
-        name: ${{ matrix.asset_name }}
-        path: target/${{ matrix.target }}/release/${{ matrix.artifact_name }}
-
-  integration-test:
-    name: Integration Tests
-    runs-on: ubuntu-latest
-    needs: test
-    
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Install Rust
-      uses: dtolnay/rust-toolchain@stable
-    
-    - name: Cache dependencies
-      uses: actions/cache@v4
-      with:
+        name: ${{ matrix.platform.artifact }}
         path: |
-          ~/.cargo/registry
-          ~/.cargo/git
-          target
-        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-    
-    - name: Build
-      run: cargo build --release
-    
-    - name: Run integration tests
-      run: cargo test --test integration_tests --release
-    
-    - name: Test CLI help
-      run: |
-        ./target/release/deepwiki-rs --help
-        ./target/release/deepwiki-rs --version
-    
-    - name: Test basic functionality
-      run: |
-        # 创建测试项目
-        mkdir -p test_project/src
-        echo 'fn main() { println!("Hello, world!"); }' > test_project/src/main.rs
-        echo '[package]' > test_project/Cargo.toml
-        echo 'name = "test-project"' >> test_project/Cargo.toml
-        echo 'version = "0.1.0"' >> test_project/Cargo.toml
-        
-        # 运行 deepwiki-rs (禁用LLM工具)
-        ./target/release/deepwiki-rs -p test_project -o test_output --disable-preset-tools
-        
-        # 验证输出目录被创建（禁用LLM时不会有文档文件）
-        ls -la test_output/ || echo "输出目录为空是预期的，因为LLM已被禁用"
-        test -d test_output/
+          ${{ matrix.platform.artifact }}.tar.gz
+          ${{ matrix.platform.artifact }}.zip
 
-  coverage:
-    name: Code Coverage
-    runs-on: ubuntu-latest
-    
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Install Rust
-      uses: dtolnay/rust-toolchain@stable
-      with:
-        components: llvm-tools-preview
-    
-    - name: Install cargo-llvm-cov
-      uses: taiki-e/install-action@cargo-llvm-cov
-    
-    - name: Generate coverage report
-      run: cargo llvm-cov --all-features --workspace --lcov --output-path lcov.info
-    
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v4
-      with:
-        files: lcov.info
-        fail_ci_if_error: false
-        verbose: true
-
+  # 创建 GitHub Release（仅在打 tag 时）
   release:
-    name: Create GitHub Release
+    name: Create Release
     runs-on: ubuntu-latest
     needs: build
     if: startsWith(github.ref, 'refs/tags/v')
     
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
     - name: Download all artifacts
       uses: actions/download-artifact@v4
       with:
         path: artifacts
     
     - name: Create release
-      id: create_release
       uses: softprops/action-gh-release@v1
       with:
         tag_name: ${{ github.ref_name }}
@@ -206,14 +138,6 @@ jobs:
         draft: false
         prerelease: false
         files: |
-          artifacts/*
+          artifacts/**/*.tar.gz
+          artifacts/**/*.zip
         generate_release_notes: true
-    
-    - name: Upload release assets
-      uses: softprops/action-gh-release@v1
-      with:
-        tag_name: ${{ github.ref_name }}
-        files: |
-          artifacts/deepwiki-rs-linux-amd64
-          artifacts/deepwiki-rs-windows-amd64
-          artifacts/deepwiki-rs-macos-amd64

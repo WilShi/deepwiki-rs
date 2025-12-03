@@ -16,6 +16,12 @@ pub struct CodeAnalyze {
     language_processor: LanguageProcessorManager,
 }
 
+impl Default for CodeAnalyze {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl CodeAnalyze {
     pub fn new() -> Self {
         Self {

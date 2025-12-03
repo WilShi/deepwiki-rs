@@ -166,50 +166,74 @@ pub struct CodeComplexity {
 /// 代码功能分类枚举
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, Hash, JsonSchema)]
 #[serde(rename_all = "lowercase")]
+#[derive(Default)]
 pub enum CodePurpose {
     /// 项目执行入口
+    #[serde(alias = "项目执行入口")]
     Entry,
     /// 智能Agent
+    #[serde(alias = "智能Agent")]
     Agent,
     /// 前端UI页面
+    #[serde(alias = "前端UI页面")]
     Page,
     /// 前端UI组件
+    #[serde(alias = "前端UI组件")]
     Widget,
     /// 用于处理实现特定逻辑功能的代码模块
+    #[serde(alias = "特定功能模块", alias = "用于处理实现特定逻辑功能", alias = "用于处理实现特定逻辑功能的代码模块")]
     SpecificFeature,
     /// 数据类型或模型
+    #[serde(alias = "数据类型或模型")]
     Model,
     /// 程序内部接口定义
+    #[serde(alias = "程序接口定义", alias = "程序内部接口定义")]
     Types,
     /// 特定场景下的功能工具代码
+    #[serde(alias = "特定场景功能工具代码", alias = "特定场景下的功能工具代码")]
     Tool,
     /// 通用、基础的工具函数和类，提供与业务逻辑无关的底层辅助功能
+    #[serde(alias = "通用基础工具函数和类", alias = "基础工具函数", alias = "通用、基础的工具函数和类，提供与业务逻辑无关的底层辅助功能")]
     Util,
     /// 配置
+    #[serde(alias = "配置相关", alias = "配置")]
     Config,
     /// 中间件
+    #[serde(alias = "中间件")]
     Middleware,
     /// 插件
+    #[serde(alias = "插件")]
     Plugin,
     /// 前端或后端系统内的路由
+    #[serde(alias = "路由组件", alias = "前端或后端系统内的路由")]
     Router,
     /// 数据库组件
+    #[serde(alias = "数据库组件")]
     Database,
     /// 供外部调用的服务API，提供基于HTTP、RPC、IPC等协议等调用能力。
+    #[serde(alias = "供外部调用的服务API", alias = "各类接口定义", alias = "供外部调用的服务API，提供基于HTTP、RPC、IPC等协议等调用能力。")]
     Api,
     /// MVC架构中的Controller组件，负责处理业务逻辑
+    #[serde(alias = "MVC架构中的Controller组件", alias = "Controller组件", alias = "MVC架构中的Controller组件，负责处理业务逻辑")]
     Controller,
     /// MVC架构中的Service组件，负责处理业务规则
+    #[serde(alias = "MVC架构中的Service组件", alias = "Service组件", alias = "MVC架构中的Service组件，负责处理业务规则")]
     Service,
     /// 明确的边界和职责的一组相关代码（函数、类、资源）的集合
+    #[serde(alias = "明确的模块组件", alias = "模块组件", alias = "明确的边界和职责的一组相关代码（函数、类、资源）的集合")]
     Module,
     /// 依赖库
+    #[serde(alias = "依赖库")]
     Lib,
     /// 测试组件
+    #[serde(alias = "测试组件")]
     Test,
     /// 文档组件
+    #[serde(alias = "文档组件")]
     Doc,
     /// 其他未归类或未知
+    #[default]
+    #[serde(alias = "其他未归类", alias = "其他组件", alias = "其他未归类或未知")]
     Other,
 }
 
@@ -246,12 +270,6 @@ impl CodePurpose {
 impl Display for CodePurpose {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.display_name())
-    }
-}
-
-impl Default for CodePurpose {
-    fn default() -> Self {
-        CodePurpose::Other
     }
 }
 

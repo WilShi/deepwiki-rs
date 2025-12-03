@@ -257,6 +257,7 @@ impl CacheManager {
     }
 
     /// 生成性能报告
+    #[allow(dead_code)]
     pub fn generate_performance_report(&self) -> CachePerformanceReport {
         self.performance_monitor.generate_report()
     }

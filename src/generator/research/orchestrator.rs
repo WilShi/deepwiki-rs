@@ -35,7 +35,7 @@ impl ResearchOrchestrator {
             .await?;
 
         // 边界接口分析
-        self.execute_agent("BoundaryAnalyzer", &BoundaryAnalyzer::default(), context)
+        self.execute_agent("BoundaryAnalyzer", &BoundaryAnalyzer, context)
             .await?;
 
         println!("✓ Litho Studies Research流程执行完毕");

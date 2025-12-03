@@ -13,14 +13,16 @@ pub mod summary_outlet;
 pub use fixer::MermaidFixer;
 
 /// 保存文档
-pub async fn save(context: &GeneratorContext) -> Result<()> {
-    let doc_tree = DocTree::new(&context.config.target_language);
+pub async fn save(context: &GeneratorContext, doc_tree: DocTree) -> Result<()> {
     let outlet = DiskOutlet::new(doc_tree);
     outlet.save(context).await
 }
 
 pub trait Outlet {
-    async fn save(&self, context: &GeneratorContext) -> Result<()>;
+    fn save(
+        &self,
+        context: &GeneratorContext,
+    ) -> impl std::future::Future<Output = Result<()>> + Send;
 }
 
 pub struct DocTree {
@@ -46,6 +48,10 @@ impl DocTree {
             (
                 AgentType::Boundary.to_string(),
                 target_language.get_doc_filename("boundary"),
+            ),
+            (
+                AgentType::CodeIndex.to_string(),
+                target_language.get_doc_filename("code_index"),
             ),
         ]);
         Self { structure }
@@ -95,10 +101,10 @@ impl Outlet for DiskOutlet {
                 let output_file_path = output_dir.join(relative_path);
 
                 // 确保父目录存在
-                if let Some(parent_dir) = output_file_path.parent() {
-                    if !parent_dir.exists() {
-                        fs::create_dir_all(parent_dir)?;
-                    }
+                if let Some(parent_dir) = output_file_path.parent()
+                    && !parent_dir.exists()
+                {
+                    fs::create_dir_all(parent_dir)?;
                 }
 
                 // 写入文档内容到文件

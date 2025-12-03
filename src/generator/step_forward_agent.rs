@@ -200,7 +200,7 @@ impl DataFormatter {
                 ));
             }
         }
-        content.push_str("\n");
+        content.push('\n');
         content
     }
 
@@ -242,7 +242,7 @@ impl DataFormatter {
                 rel.dependency_type.as_str()
             ));
         }
-        content.push_str("\n");
+        content.push('\n');
         content
     }
 
@@ -359,7 +359,7 @@ impl GeneratorPromptBuilder {
         // 插入自定义内容（如果有）
         if let Some(custom) = custom_content {
             prompt.push_str(&custom);
-            prompt.push_str("\n");
+            prompt.push('\n');
         }
 
         // 收集并格式化各种数据源

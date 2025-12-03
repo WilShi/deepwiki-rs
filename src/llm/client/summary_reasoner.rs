@@ -56,7 +56,7 @@ impl SummaryReasoner {
             for (index, tool_call) in tool_calls_history.iter().enumerate() {
                 prompt.push_str(&format!("{}. {}\n", index + 1, tool_call));
             }
-            prompt.push_str("\n");
+            prompt.push('\n');
         }
 
         // 添加详细的对话历史信息

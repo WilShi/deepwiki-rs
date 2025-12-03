@@ -285,14 +285,13 @@ impl AgentToolFileExplorer {
         }
 
         // 检查排除的扩展名
-        if let Some(extension) = path.extension().and_then(|e| e.to_str()) {
-            if self
+        if let Some(extension) = path.extension().and_then(|e| e.to_str())
+            && self
                 .config
                 .excluded_extensions
                 .contains(&extension.to_lowercase())
-            {
-                return true;
-            }
+        {
+            return true;
         }
 
         // 检查包含的扩展名（如果指定了）
@@ -321,10 +320,10 @@ impl AgentToolFileExplorer {
         }
 
         // 检查文件大小
-        if let Ok(metadata) = std::fs::metadata(path) {
-            if metadata.len() > self.config.max_file_size {
-                return true;
-            }
+        if let Ok(metadata) = std::fs::metadata(path)
+            && metadata.len() > self.config.max_file_size
+        {
+            return true;
         }
 
         false

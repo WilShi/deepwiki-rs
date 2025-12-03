@@ -13,6 +13,12 @@ pub struct PythonProcessor {
     async_function_regex: Regex,
 }
 
+impl Default for PythonProcessor {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl PythonProcessor {
     pub fn new() -> Self {
         Self {
@@ -58,20 +64,20 @@ impl LanguageProcessor for PythonProcessor {
                 }
             }
             // 提取import语句
-            else if let Some(captures) = self.import_regex.captures(line) {
-                if let Some(import_path) = captures.get(1) {
-                    let import_str = import_path.as_str();
-                    let is_external = !import_str.starts_with('.') && !import_str.starts_with("__");
+            else if let Some(captures) = self.import_regex.captures(line)
+                && let Some(import_path) = captures.get(1)
+            {
+                let import_str = import_path.as_str();
+                let is_external = !import_str.starts_with('.') && !import_str.starts_with("__");
 
-                    dependencies.push(Dependency {
-                        name: source_file.clone(),
-                        path: Some(import_str.to_string()),
-                        is_external,
-                        line_number: Some(line_num + 1),
-                        dependency_type: "import".to_string(),
-                        version: None,
-                    });
-                }
+                dependencies.push(Dependency {
+                    name: source_file.clone(),
+                    path: Some(import_str.to_string()),
+                    is_external,
+                    line_number: Some(line_num + 1),
+                    dependency_type: "import".to_string(),
+                    version: None,
+                });
             }
         }
 
@@ -264,13 +270,12 @@ impl PythonProcessor {
             }
 
             // 检测类定义结束
-            if trimmed.starts_with("class ")
+            if (trimmed.starts_with("class ")
                 || trimmed.starts_with("def ")
-                || trimmed.starts_with("@")
+                || trimmed.starts_with("@"))
+                && in_class
             {
-                if in_class {
-                    break;
-                }
+                break;
             }
 
             // 检测类体开始

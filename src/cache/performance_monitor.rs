@@ -45,7 +45,6 @@ pub struct CategoryMetrics {
 
 /// 缓存性能报告
 #[derive(Debug, Serialize, Deserialize)]
-#[allow(dead_code)] // 预留功能，尚未使用
 pub struct CachePerformanceReport {
     /// 缓存命中率
     pub hit_rate: f64,

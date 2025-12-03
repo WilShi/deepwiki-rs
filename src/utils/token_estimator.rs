@@ -44,6 +44,12 @@ pub struct TokenEstimation {
     pub english_char_count: usize,
 }
 
+impl Default for TokenEstimator {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl TokenEstimator {
     pub fn new() -> Self {
         Self {

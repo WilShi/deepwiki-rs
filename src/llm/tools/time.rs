@@ -38,6 +38,12 @@ impl std::fmt::Display for TimeToolError {
 
 impl std::error::Error for TimeToolError {}
 
+impl Default for AgentToolTime {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl AgentToolTime {
     pub fn new() -> Self {
         Self

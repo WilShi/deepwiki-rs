@@ -36,6 +36,22 @@ impl LLMClient {
         Ok(Self { client, config })
     }
 
+    /// 检查模型连接和功能是否正常
+    pub async fn check_connection(&self) -> Result<()> {
+        println!("🔄 正在检查模型连接...");
+        // 使用一个简单的prompt来测试连接
+        match self.prompt_without_react("System: You are a helpful assistant.", "Hello").await {
+            Ok(_) => {
+                println!("✅ 模型连接正常");
+                Ok(())
+            }
+            Err(e) => {
+                eprintln!("❌ 模型连接失败: {}", e);
+                Err(e)
+            }
+        }
+    }
+
     /// 获取Agent构建器
     fn get_agent_builder(&self) -> AgentBuilder<'_> {
         AgentBuilder::new(&self.client, &self.config)
@@ -121,7 +137,7 @@ impl LLMClient {
                             "❌ 调用模型服务出错，尝试 {} 次均失败...{}",
                             llm_config.retry_attempts, e
                         );
-                        Err(e.into())
+                        Err(e)
                     }
                 },
             }
@@ -150,9 +166,7 @@ impl LLMClient {
 
         let response = self
             .retry_with_backoff(|| async {
-                ReActExecutor::execute(&agent, user_prompt, &react_config)
-                    .await
-                    .map_err(|e| e.into())
+                ReActExecutor::execute(&agent, user_prompt, &react_config).await
             })
             .await?;
 
@@ -212,7 +226,6 @@ impl LLMClient {
                     &original_response.tool_calls_history,
                 )
                 .await
-                .map_err(|e| e.into())
             })
             .await?;
 
@@ -233,7 +246,7 @@ impl LLMClient {
         let agent_builder = self.get_agent_builder();
         let agent = agent_builder.build_agent_without_tools(system_prompt);
 
-        self.retry_with_backoff(|| async { agent.prompt(user_prompt).await.map_err(|e| e.into()) })
+        self.retry_with_backoff(|| async { agent.prompt(user_prompt).await })
             .await
     }
 }

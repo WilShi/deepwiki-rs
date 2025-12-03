@@ -20,6 +20,12 @@ pub struct AICodePurposeAnalysis {
 /// 组件类型增强器，结合规则和AI分析
 pub struct CodePurposeEnhancer;
 
+impl Default for CodePurposeEnhancer {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl CodePurposeEnhancer {
     pub fn new() -> Self {
         Self {}

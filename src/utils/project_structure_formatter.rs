@@ -147,13 +147,12 @@ impl DirectoryTree {
     /// 生成目录树字符串表示
     fn to_tree_string(&self) -> String {
         let mut result = String::new();
-        self.render_directory_node(&self.root, "", true, &mut result);
+        Self::render_directory_node(&self.root, "", true, &mut result);
         result
     }
 
     /// 递归渲染目录节点
     fn render_directory_node(
-        &self,
         node: &DirectoryNode,
         prefix: &str,
         is_last: bool,
@@ -175,7 +174,7 @@ impl DirectoryTree {
                 format!("{}│   ", prefix)
             };
 
-            self.render_directory_node(child, &new_prefix, is_last_child, result);
+            Self::render_directory_node(child, &new_prefix, is_last_child, result);
         }
     }
 }
@@ -205,7 +204,7 @@ impl PathTree {
 
         let mut current = &mut self.root;
 
-        for (_i, component) in components.iter().enumerate() {
+        for component in components.iter() {
             current
                 .children
                 .entry(component.to_string())
@@ -218,12 +217,12 @@ impl PathTree {
     /// 生成树形字符串表示
     fn to_tree_string(&self) -> String {
         let mut result = String::new();
-        self.render_node(&self.root, "", true, &mut result);
+        Self::render_node(&self.root, "", true, &mut result);
         result
     }
 
     /// 递归渲染节点
-    fn render_node(&self, node: &PathNode, prefix: &str, is_last: bool, result: &mut String) {
+    fn render_node(node: &PathNode, prefix: &str, is_last: bool, result: &mut String) {
         if !node.name.is_empty() {
             let connector = if is_last { "└── " } else { "├── " };
             result.push_str(&format!("{}{}{}\n", prefix, connector, node.name));
@@ -240,7 +239,7 @@ impl PathTree {
                 format!("{}│   ", prefix)
             };
 
-            self.render_node(child, &new_prefix, is_last_child, result);
+            Self::render_node(child, &new_prefix, is_last_child, result);
         }
     }
 }

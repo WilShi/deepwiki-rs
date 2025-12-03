@@ -14,6 +14,12 @@ pub struct JavaProcessor {
     constructor_regex: Regex,
 }
 
+impl Default for JavaProcessor {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl JavaProcessor {
     pub fn new() -> Self {
         Self {
@@ -39,39 +45,39 @@ impl LanguageProcessor for JavaProcessor {
 
         for (line_num, line) in content.lines().enumerate() {
             // 提取import语句
-            if let Some(captures) = self.import_regex.captures(line) {
-                if let Some(import_path) = captures.get(1) {
-                    let import_str = import_path.as_str().trim();
-                    let is_external = import_str.starts_with("java.")
-                        || import_str.starts_with("javax.")
-                        || import_str.contains(".");
+            if let Some(captures) = self.import_regex.captures(line)
+                && let Some(import_path) = captures.get(1)
+            {
+                let import_str = import_path.as_str().trim();
+                let is_external = import_str.starts_with("java.")
+                    || import_str.starts_with("javax.")
+                    || import_str.contains(".");
 
-                    // 解析依赖名称
-                    let dependency_name = self.extract_dependency_name(import_str);
+                // 解析依赖名称
+                let dependency_name = self.extract_dependency_name(import_str);
 
-                    dependencies.push(Dependency {
-                        name: dependency_name,
-                        path: Some(import_str.to_string()),
-                        is_external,
-                        line_number: Some(line_num + 1),
-                        dependency_type: "import".to_string(),
-                        version: None,
-                    });
-                }
+                dependencies.push(Dependency {
+                    name: dependency_name,
+                    path: Some(import_str.to_string()),
+                    is_external,
+                    line_number: Some(line_num + 1),
+                    dependency_type: "import".to_string(),
+                    version: None,
+                });
             }
 
             // 提取package语句
-            if let Some(captures) = self.package_regex.captures(line) {
-                if let Some(package_name) = captures.get(1) {
-                    dependencies.push(Dependency {
-                        name: package_name.as_str().trim().to_string(),
-                        path: Some(package_name.as_str().trim().to_string()),
-                        is_external: false,
-                        line_number: Some(line_num + 1),
-                        dependency_type: "package".to_string(),
-                        version: None,
-                    });
-                }
+            if let Some(captures) = self.package_regex.captures(line)
+                && let Some(package_name) = captures.get(1)
+            {
+                dependencies.push(Dependency {
+                    name: package_name.as_str().trim().to_string(),
+                    path: Some(package_name.as_str().trim().to_string()),
+                    is_external: false,
+                    line_number: Some(line_num + 1),
+                    dependency_type: "package".to_string(),
+                    version: None,
+                });
             }
         }
 

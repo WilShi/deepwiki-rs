@@ -9,6 +9,12 @@ pub struct KotlinProcessor {
     package_regex: Regex,
 }
 
+impl Default for KotlinProcessor {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl KotlinProcessor {
     pub fn new() -> Self {
         Self {
@@ -29,38 +35,38 @@ impl LanguageProcessor for KotlinProcessor {
 
         for (line_num, line) in content.lines().enumerate() {
             // 提取import语句
-            if let Some(captures) = self.import_regex.captures(line) {
-                if let Some(import_path) = captures.get(1) {
-                    let import_str = import_path.as_str();
-                    let is_external = import_str.starts_with("android.")
-                        || import_str.starts_with("androidx.")
-                        || import_str.starts_with("kotlin.")
-                        || import_str.starts_with("java.")
-                        || !import_str.contains(".");
+            if let Some(captures) = self.import_regex.captures(line)
+                && let Some(import_path) = captures.get(1)
+            {
+                let import_str = import_path.as_str();
+                let is_external = import_str.starts_with("android.")
+                    || import_str.starts_with("androidx.")
+                    || import_str.starts_with("kotlin.")
+                    || import_str.starts_with("java.")
+                    || !import_str.contains(".");
 
-                    dependencies.push(Dependency {
-                        name: source_file.clone(),
-                        path: Some(import_str.to_string()),
-                        is_external,
-                        line_number: Some(line_num + 1),
-                        dependency_type: "import".to_string(),
-                        version: None,
-                    });
-                }
+                dependencies.push(Dependency {
+                    name: source_file.clone(),
+                    path: Some(import_str.to_string()),
+                    is_external,
+                    line_number: Some(line_num + 1),
+                    dependency_type: "import".to_string(),
+                    version: None,
+                });
             }
 
             // 提取package语句
-            if let Some(captures) = self.package_regex.captures(line) {
-                if let Some(package_name) = captures.get(1) {
-                    dependencies.push(Dependency {
-                        name: source_file.clone(),
-                        path: Some(package_name.as_str().to_string()),
-                        is_external: false,
-                        line_number: Some(line_num + 1),
-                        dependency_type: "package".to_string(),
-                        version: None,
-                    });
-                }
+            if let Some(captures) = self.package_regex.captures(line)
+                && let Some(package_name) = captures.get(1)
+            {
+                dependencies.push(Dependency {
+                    name: source_file.clone(),
+                    path: Some(package_name.as_str().to_string()),
+                    is_external: false,
+                    line_number: Some(line_num + 1),
+                    dependency_type: "package".to_string(),
+                    version: None,
+                });
             }
         }
 
@@ -191,82 +197,82 @@ impl LanguageProcessor for KotlinProcessor {
             let trimmed = line.trim();
 
             // 提取函数定义
-            if trimmed.starts_with("fun ") || trimmed.contains(" fun ") {
-                if let Some(func_name) = self.extract_kotlin_function(trimmed) {
-                    let visibility = self.extract_kotlin_visibility(trimmed);
-                    let is_suspend = trimmed.contains("suspend");
-                    let interface_type = if is_suspend {
-                        "suspend_function"
-                    } else {
-                        "function"
-                    };
+            if (trimmed.starts_with("fun ") || trimmed.contains(" fun "))
+                && let Some(func_name) = self.extract_kotlin_function(trimmed)
+            {
+                let visibility = self.extract_kotlin_visibility(trimmed);
+                let is_suspend = trimmed.contains("suspend");
+                let interface_type = if is_suspend {
+                    "suspend_function"
+                } else {
+                    "function"
+                };
 
-                    interfaces.push(InterfaceInfo::new(
-                        func_name,
-                        interface_type.to_string(),
-                        visibility,
-                        Vec::new(),
-                        self.extract_kotlin_return_type(trimmed),
-                        self.extract_kotlin_comment(&lines, i),
-                    ));
-                }
+                interfaces.push(InterfaceInfo::new(
+                    func_name,
+                    interface_type.to_string(),
+                    visibility,
+                    Vec::new(),
+                    self.extract_kotlin_return_type(trimmed),
+                    self.extract_kotlin_comment(&lines, i),
+                ));
             }
 
             // 提取类定义
-            if trimmed.starts_with("class ") || trimmed.contains(" class ") {
-                if let Some(class_name) = self.extract_kotlin_class(trimmed) {
-                    let visibility = self.extract_kotlin_visibility(trimmed);
-                    let is_data = trimmed.contains("data class");
-                    let is_sealed = trimmed.contains("sealed class");
-                    let interface_type = if is_data {
-                        "data_class"
-                    } else if is_sealed {
-                        "sealed_class"
-                    } else {
-                        "class"
-                    };
+            if (trimmed.starts_with("class ") || trimmed.contains(" class "))
+                && let Some(class_name) = self.extract_kotlin_class(trimmed)
+            {
+                let visibility = self.extract_kotlin_visibility(trimmed);
+                let is_data = trimmed.contains("data class");
+                let is_sealed = trimmed.contains("sealed class");
+                let interface_type = if is_data {
+                    "data_class"
+                } else if is_sealed {
+                    "sealed_class"
+                } else {
+                    "class"
+                };
 
-                    interfaces.push(InterfaceInfo::new(
-                        class_name,
-                        interface_type.to_string(),
-                        visibility,
-                        Vec::new(),
-                        None,
-                        self.extract_kotlin_comment(&lines, i),
-                    ));
-                }
+                interfaces.push(InterfaceInfo::new(
+                    class_name,
+                    interface_type.to_string(),
+                    visibility,
+                    Vec::new(),
+                    None,
+                    self.extract_kotlin_comment(&lines, i),
+                ));
             }
 
             // 提取接口定义
-            if trimmed.starts_with("interface ") || trimmed.contains(" interface ") {
-                if let Some(interface_name) = self.extract_kotlin_interface(trimmed) {
-                    let visibility = self.extract_kotlin_visibility(trimmed);
+            if (trimmed.starts_with("interface ") || trimmed.contains(" interface "))
+                && let Some(interface_name) = self.extract_kotlin_interface(trimmed)
+            {
+                let visibility = self.extract_kotlin_visibility(trimmed);
 
-                    interfaces.push(InterfaceInfo::new(
-                        interface_name,
-                        "interface".to_string(),
-                        visibility,
-                        Vec::new(),
-                        None,
-                        self.extract_kotlin_comment(&lines, i),
-                    ));
-                }
+                interfaces.push(InterfaceInfo::new(
+                    interface_name,
+                    "interface".to_string(),
+                    visibility,
+                    Vec::new(),
+                    None,
+                    self.extract_kotlin_comment(&lines, i),
+                ));
             }
 
             // 提取对象定义
-            if trimmed.starts_with("object ") || trimmed.contains(" object ") {
-                if let Some(object_name) = self.extract_kotlin_object(trimmed) {
-                    let visibility = self.extract_kotlin_visibility(trimmed);
+            if (trimmed.starts_with("object ") || trimmed.contains(" object "))
+                && let Some(object_name) = self.extract_kotlin_object(trimmed)
+            {
+                let visibility = self.extract_kotlin_visibility(trimmed);
 
-                    interfaces.push(InterfaceInfo::new(
-                        object_name,
-                        "object".to_string(),
-                        visibility,
-                        Vec::new(),
-                        None,
-                        self.extract_kotlin_comment(&lines, i),
-                    ));
-                }
+                interfaces.push(InterfaceInfo::new(
+                    object_name,
+                    "object".to_string(),
+                    visibility,
+                    Vec::new(),
+                    None,
+                    self.extract_kotlin_comment(&lines, i),
+                ));
             }
         }
 

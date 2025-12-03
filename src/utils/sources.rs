@@ -100,8 +100,7 @@ pub fn read_dependency_code_source(
         // 尝试找到依赖文件
         if let Some(dep_path) =
             find_dependency_file(language_processor, project_path, &dep_info.name)
-        {
-            if let Ok(content) = std::fs::read_to_string(&dep_path) {
+            && let Ok(content) = std::fs::read_to_string(&dep_path) {
                 let truncated =
                     truncate_source_code(language_processor, &dep_path, &content, 8_1024);
                 dependency_code.push_str(&format!(
@@ -112,7 +111,6 @@ pub fn read_dependency_code_source(
                 ));
                 total_length += truncated.len();
             }
-        }
     }
 
     if dependency_code.is_empty() {
@@ -243,15 +241,13 @@ fn recursive_find_file(project_path: &PathBuf, file_name: &str) -> Option<std::p
                 let path = entry.path();
 
                 if path.is_file() {
-                    if let Some(file_name) = path.file_stem() {
-                        if let Some(ext) = path.extension() {
-                            if file_name.to_string_lossy() == target_name
+                    if let Some(file_name) = path.file_stem()
+                        && let Some(ext) = path.extension()
+                            && file_name.to_string_lossy() == target_name
                                 && extensions.contains(&ext.to_string_lossy().as_ref())
                             {
                                 return Some(path);
                             }
-                        }
-                    }
                 } else if path.is_dir() {
                     // 跳过常见的忽略目录
                     if let Some(dir_name) = path.file_name() {
@@ -261,11 +257,9 @@ fn recursive_find_file(project_path: &PathBuf, file_name: &str) -> Option<std::p
                             && dir_name_str != "target"
                             && dir_name_str != "build"
                             && dir_name_str != "dist"
-                        {
-                            if let Some(found) = search_directory(&path, target_name, extensions) {
+                            && let Some(found) = search_directory(&path, target_name, extensions) {
                                 return Some(found);
                             }
-                        }
                     }
                 }
             }

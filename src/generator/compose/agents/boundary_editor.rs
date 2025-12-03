@@ -141,7 +141,7 @@ impl BoundaryEditor {
     }
 
     fn generate_cli_documentation(&self, cli_boundaries: &[CLIBoundary]) -> String {
-        if cli_boundaries.len() == 0 {
+        if cli_boundaries.is_empty() {
             return String::new();
         }
 
@@ -167,7 +167,7 @@ impl BoundaryEditor {
                         arg.name, arg.value_type, required_text, arg.description, default_text
                     ));
                 }
-                content.push_str("\n");
+                content.push('\n');
             }
 
             if !cli.options.is_empty() {
@@ -194,7 +194,7 @@ impl BoundaryEditor {
                         default_text
                     ));
                 }
-                content.push_str("\n");
+                content.push('\n');
             }
 
             if !cli.examples.is_empty() {
@@ -209,7 +209,7 @@ impl BoundaryEditor {
     }
 
     fn generate_api_documentation(&self, api_boundaries: &[APIBoundary]) -> String {
-        if api_boundaries.len() == 0 {
+        if api_boundaries.is_empty() {
             return String::new();
         }
 
@@ -232,13 +232,61 @@ impl BoundaryEditor {
             if let Some(auth) = &api.authentication {
                 content.push_str(&format!("**认证方式**: {}\n\n", auth));
             }
+
+            // 🆕 添加 cURL 调用示例
+            content.push_str("**cURL 调用示例**:\n\n```bash\n");
+            match api.method.as_str() {
+                "GET" => {
+                    content.push_str(&format!("curl -X GET 'http://localhost:3000{}'\n", api.endpoint));
+                }
+                "POST" => {
+                    content.push_str(&format!(
+                        "curl -X POST 'http://localhost:3000{}' \\\n  -H 'Content-Type: application/json' \\\n  -d '{{}}'\n",
+                        api.endpoint
+                    ));
+                }
+                "PUT" => {
+                    content.push_str(&format!(
+                        "curl -X PUT 'http://localhost:3000{}' \\\n  -H 'Content-Type: application/json' \\\n  -d '{{}}'\n",
+                        api.endpoint
+                    ));
+                }
+                "DELETE" => {
+                    content.push_str(&format!("curl -X DELETE 'http://localhost:3000{}'\n", api.endpoint));
+                }
+                _ => {
+                    content.push_str(&format!("curl -X {} 'http://localhost:3000{}'\n", api.method, api.endpoint));
+                }
+            }
+            content.push_str("```\n\n");
+
+            // 🆕 添加客户端代码示例（Rust）
+            if api.method != "GET" {
+                content.push_str("**Rust 客户端示例**:\n\n```rust\n");
+                content.push_str(&format!(
+                    "let response = client.{}(\"http://localhost:3000{}\")\n",
+                    api.method.to_lowercase(),
+                    api.endpoint
+                ));
+                if api.method == "POST" || api.method == "PUT" {
+                    content.push_str("    .json(&request_data)\n");
+                }
+                content.push_str("    .send()\n    .await?;\n");
+                content.push_str("let data = response.json().await?;\n```\n\n");
+            }
+
+            // 🆕 添加响应示例
+            content.push_str("**成功响应示例**:\n\n```json\n{\n  \"status\": \"success\",\n  \"data\": {}\n}\n```\n\n");
+            
+            // 🆕 添加错误响应示例
+            content.push_str("**错误响应示例**:\n\n```json\n{\n  \"status\": \"error\",\n  \"message\": \"错误描述\",\n  \"code\": \"ERROR_CODE\"\n}\n```\n\n");
         }
 
         content
     }
 
     fn generate_router_documentation(&self, router_boundaries: &[RouterBoundary]) -> String {
-        if router_boundaries.len() == 0 {
+        if router_boundaries.is_empty() {
             return String::new();
         }
 
@@ -268,7 +316,7 @@ impl BoundaryEditor {
         &self,
         integration_suggestions: &[IntegrationSuggestion],
     ) -> String {
-        if integration_suggestions.len() == 0 {
+        if integration_suggestions.is_empty() {
             return String::new();
         }
 
@@ -289,7 +337,7 @@ impl BoundaryEditor {
                 for practice in &suggestion.best_practices {
                     content.push_str(&format!("- {}\n", practice));
                 }
-                content.push_str("\n");
+                content.push('\n');
             }
         }
 

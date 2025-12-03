@@ -201,12 +201,11 @@ impl BoundaryAnalyzer {
 
             // 从 interfaces 中提取函数信息
             for interface in &insight.interfaces {
-                if interface.interface_type == "function" || interface.interface_type == "method" {
-                    if let Some(endpoint) = self.extract_endpoint_from_interface(insight, interface)
+                if (interface.interface_type == "function" || interface.interface_type == "method")
+                    && let Some(endpoint) = self.extract_endpoint_from_interface(insight, interface)
                     {
                         endpoints.push(endpoint);
                     }
-                }
             }
         }
 
@@ -528,7 +527,7 @@ impl BoundaryAnalyzer {
 
         for method in &http_methods {
             let pattern = format!(r#"{}\s*/([^/\s]+)"#, method);
-            if let Some(re) = regex::Regex::new(&pattern).ok() {
+            if let Ok(re) = regex::Regex::new(&pattern) {
                 for captures in re.captures_iter(source_code) {
                     if let Some(path_match) = captures.get(1) {
                         endpoints.push(ApiEndpoint {
@@ -696,7 +695,7 @@ impl BoundaryAnalyzer {
             }
         }
 
-        content.push_str("\n");
+        content.push('\n');
         content
     }
 
@@ -732,6 +731,6 @@ impl BoundaryAnalyzer {
             ));
         }
 
-        content.push_str("\n");
+        content.push('\n');
     }
 }

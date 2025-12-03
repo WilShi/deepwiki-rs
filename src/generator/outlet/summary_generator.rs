@@ -9,16 +9,19 @@ use crate::generator::context::GeneratorContext;
 use crate::generator::preprocess::memory::{MemoryScope as PreprocessMemoryScope, ScopedKeys};
 use crate::generator::research::memory::MemoryScope as ResearchMemoryScope;
 use crate::generator::research::types::AgentType as ResearchAgentType;
-use crate::generator::workflow::{TimingKeys, TimingScope};
+use crate::generator::workflow::TimingKeys;
 
 /// Summary数据收集器 - 负责从context中提取四类调研材料
+#[allow(dead_code)]
 pub struct SummaryDataCollector;
 
 /// Summary内容生成器 - 负责格式化和组织内容
+#[allow(dead_code)]
 pub struct SummaryContentGenerator;
 
 /// Summary生成模式
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub enum SummaryMode {
     /// 完整模式 - 包含所有详细数据
     Full,
@@ -28,6 +31,7 @@ pub enum SummaryMode {
 
 /// Summary数据结构
 #[derive(Debug)]
+#[allow(dead_code)]
 pub struct SummaryData {
     /// 系统上下文调研报告
     pub system_context: Option<Value>,
@@ -49,6 +53,7 @@ pub struct SummaryData {
 
 /// 缓存统计数据
 #[derive(Debug)]
+#[allow(dead_code)]
 pub struct CacheStatsData {
     pub hit_rate: f64,
     pub total_operations: usize,
@@ -63,8 +68,9 @@ pub struct CacheStatsData {
     pub output_tokens_saved: usize,
 }
 
-/// 耗时统计数据
+/// 时间统计数据
 #[derive(Debug)]
+#[allow(dead_code)]
 pub struct TimingStats {
     /// 总执行时间（秒）
     pub total_execution_time: f64,
@@ -84,6 +90,7 @@ pub struct TimingStats {
 
 impl SummaryDataCollector {
     /// 从GeneratorContext中收集所有需要的数据
+    #[allow(dead_code)]
     pub async fn collect_data(context: &GeneratorContext) -> Result<SummaryData> {
         let start_time = Instant::now();
 
@@ -110,7 +117,10 @@ impl SummaryDataCollector {
             .await;
 
         let code_insights = context
-            .get_from_memory::<Value>(PreprocessMemoryScope::PREPROCESS, ScopedKeys::CODE_INSIGHTS)
+            .get_from_memory::<Value>(
+                PreprocessMemoryScope::PREPROCESS,
+                ScopedKeys::CODE_INSIGHTS,
+            )
             .await;
 
         // 收集Memory统计
@@ -161,37 +171,47 @@ impl SummaryDataCollector {
     }
 
     /// 收集耗时统计信息
+    #[allow(dead_code)]
     async fn collect_timing_stats(context: &GeneratorContext) -> TimingStats {
-        // 尝试从memory中获取各阶段的耗时信息
-        let preprocess_time = context
-            .get_from_memory::<f64>(TimingScope::TIMING, TimingKeys::PREPROCESS)
-            .await
+        // 尝试从时间跟踪器中获取各阶段的耗时信息
+        let phase_times = context.get_phase_execution_times().await;
+
+        let preprocess_time = phase_times
+            .get(TimingKeys::PREPROCESS)
+            .map(|d| d.as_secs_f64())
             .unwrap_or(0.0);
 
-        let research_time = context
-            .get_from_memory::<f64>(TimingScope::TIMING, TimingKeys::RESEARCH)
-            .await
+        let research_time = phase_times
+            .get(TimingKeys::RESEARCH)
+            .map(|d| d.as_secs_f64())
             .unwrap_or(0.0);
 
-        let compose_time = context
-            .get_from_memory::<f64>(TimingScope::TIMING, TimingKeys::COMPOSE)
-            .await
+        let compose_time = phase_times
+            .get(TimingKeys::COMPOSE)
+            .map(|d| d.as_secs_f64())
             .unwrap_or(0.0);
 
-        let output_time = context
-            .get_from_memory::<f64>(TimingScope::TIMING, TimingKeys::OUTPUT)
-            .await
+        let output_time = phase_times
+            .get(TimingKeys::OUTPUT)
+            .map(|d| d.as_secs_f64())
             .unwrap_or(0.0);
 
-        let document_generation_time = context
-            .get_from_memory::<f64>(TimingScope::TIMING, TimingKeys::DOCUMENT_GENERATION)
-            .await
+        let document_generation_time = phase_times
+            .get(TimingKeys::DOCUMENT_GENERATION)
+            .map(|d| d.as_secs_f64())
             .unwrap_or(0.0);
 
         let total_execution_time = context
-            .get_from_memory::<f64>(TimingScope::TIMING, TimingKeys::TOTAL_EXECUTION)
+            .get_total_execution_time()
             .await
-            .unwrap_or(preprocess_time + research_time + compose_time + output_time);
+            .map(|d| d.as_secs_f64())
+            .unwrap_or(
+                preprocess_time
+                    + research_time
+                    + compose_time
+                    + output_time
+                    + document_generation_time,
+            );
 
         TimingStats {
             total_execution_time,
@@ -207,6 +227,7 @@ impl SummaryDataCollector {
 
 impl SummaryContentGenerator {
     /// 根据收集的数据生成Markdown格式的summary内容
+    #[allow(dead_code)]
     pub fn generate_content(data: &SummaryData, mode: SummaryMode) -> String {
         match mode {
             SummaryMode::Full => Self::generate_full_content(data),
@@ -323,7 +344,7 @@ impl SummaryContentGenerator {
                 efficiency_ratio
             ));
         }
-        content.push_str("\n");
+        content.push('\n');
 
         // 4. 核心调研数据汇总
         content.push_str("## 核心调研数据汇总\n\n");
@@ -383,7 +404,7 @@ impl SummaryContentGenerator {
                     scope, size, percentage
                 ));
             }
-            content.push_str("\n");
+            content.push('\n');
         }
 
         // 6. 生成文档统计
@@ -436,7 +457,7 @@ impl SummaryContentGenerator {
             };
             content.push_str(&format!("- {}: {:.2}s ({:.1}%)\n", stage, time, percentage));
         }
-        content.push_str("\n");
+        content.push('\n');
 
         // 3. 缓存效果概览
         content.push_str("## 缓存效果概览\n\n");
@@ -475,7 +496,7 @@ impl SummaryContentGenerator {
             let cost_per_second = stats.cost_saved / timing.total_execution_time;
             content.push_str(&format!("**成本效益**: ${:.6}/秒\n", cost_per_second));
         }
-        content.push_str("\n");
+        content.push('\n');
 
         // 4. 调研数据概览
         content.push_str("## 调研数据概览\n\n");
@@ -542,7 +563,7 @@ impl SummaryContentGenerator {
                     scope, size, percentage
                 ));
             }
-            content.push_str("\n");
+            content.push('\n');
         }
 
         // 6. 文档生成概览
@@ -555,9 +576,9 @@ impl SummaryContentGenerator {
         if !data.generated_docs.is_empty() {
             content.push_str("**文档类型**: \n - ");
             content.push_str(&data.generated_docs.join("\n - "));
-            content.push_str("\n");
+            content.push('\n');
         }
-        content.push_str("\n");
+        content.push('\n');
 
         // 7. 总体评估
         content.push_str("## 总体评估\n\n");

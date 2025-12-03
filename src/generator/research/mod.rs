@@ -24,6 +24,6 @@ pub async fn execute(context: &GeneratorContext) -> Result<()> {
         return Ok(());
     }
 
-    let orchestrator = ResearchOrchestrator::default();
+    let orchestrator = ResearchOrchestrator;
     orchestrator.execute_research_pipeline(context).await
 }

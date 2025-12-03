@@ -304,8 +304,8 @@ impl Config {
                 // 简单的JSON解析，查找 "name": "..."
                 for line in content.lines() {
                     let line = line.trim();
-                    if line.starts_with("\"name\"") && line.contains(":") {
-                        if let Some(name_part) = line.split(':').nth(1) {
+                    if line.starts_with("\"name\"") && line.contains(":")
+                        && let Some(name_part) = line.split(':').nth(1) {
                             let name = name_part
                                 .trim()
                                 .trim_matches(',')
@@ -315,7 +315,6 @@ impl Config {
                                 return Some(name.to_string());
                             }
                         }
-                    }
                 }
             }
             Err(_) => return None,
@@ -356,14 +355,12 @@ impl Config {
                     if (in_project_section || in_poetry_section)
                         && line.starts_with("name")
                         && line.contains("=")
-                    {
-                        if let Some(name_part) = line.split('=').nth(1) {
+                        && let Some(name_part) = line.split('=').nth(1) {
                             let name = name_part.trim().trim_matches('"').trim_matches('\'');
                             if !name.is_empty() {
                                 return Some(name.to_string());
                             }
                         }
-                    }
                 }
             }
             Err(_) => return None,

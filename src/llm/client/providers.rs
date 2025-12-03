@@ -91,7 +91,7 @@ impl ProviderClient {
                     .into_agent_builder()
                     .preamble(system_prompt)
                     .max_tokens(config.max_tokens.into())
-                    .temperature(config.temperature.into())
+                    .temperature(config.temperature)
                     .build();
                 ProviderAgent::OpenAI(agent)
             }
@@ -99,7 +99,7 @@ impl ProviderClient {
                 let agent = client
                     .agent(model)
                     .preamble(system_prompt)
-                    .temperature(config.temperature.into())
+                    .temperature(config.temperature)
                     .build();
                 ProviderAgent::Moonshot(agent)
             }
@@ -107,7 +107,7 @@ impl ProviderClient {
                 let agent = client
                     .agent(model)
                     .preamble(system_prompt)
-                    .temperature(config.temperature.into())
+                    .temperature(config.temperature)
                     .build();
                 ProviderAgent::DeepSeek(agent)
             }
@@ -115,7 +115,7 @@ impl ProviderClient {
                 let agent = client
                     .agent(model)
                     .preamble(system_prompt)
-                    .temperature(config.temperature.into())
+                    .temperature(config.temperature)
                     .build();
                 ProviderAgent::Mistral(agent)
             }
@@ -123,7 +123,7 @@ impl ProviderClient {
                 let agent = client
                     .agent(model)
                     .preamble(system_prompt)
-                    .temperature(config.temperature.into())
+                    .temperature(config.temperature)
                     .build();
                 ProviderAgent::OpenRouter(agent)
             }
@@ -132,7 +132,7 @@ impl ProviderClient {
                     .agent(model)
                     .preamble(system_prompt)
                     .max_tokens(config.max_tokens.into())
-                    .temperature(config.temperature.into())
+                    .temperature(config.temperature)
                     .build();
                 ProviderAgent::Anthropic(agent)
             }
@@ -144,7 +144,7 @@ impl ProviderClient {
                     .agent(model)
                     .preamble(system_prompt)
                     .max_tokens(config.max_tokens.into())
-                    .temperature(config.temperature.into())
+                    .temperature(config.temperature)
                     .additional_params(serde_json::to_value(cfg).unwrap())
                     .build();
                 ProviderAgent::Gemini(agent)
@@ -154,7 +154,7 @@ impl ProviderClient {
                     .agent(model)
                     .preamble(system_prompt)
                     .max_tokens(config.max_tokens.into())
-                    .temperature(config.temperature.into())
+                    .temperature(config.temperature)
                     .build();
                 ProviderAgent::Ollama(agent)
             }
@@ -180,7 +180,7 @@ impl ProviderClient {
                     .into_agent_builder()
                     .preamble(system_prompt)
                     .max_tokens(config.max_tokens.into())
-                    .temperature(config.temperature.into())
+                    .temperature(config.temperature)
                     .tool(file_explorer.clone())
                     .tool(file_reader.clone())
                     .tool(tool_time)
@@ -192,7 +192,7 @@ impl ProviderClient {
                     .agent(model)
                     .preamble(system_prompt)
                     .max_tokens(config.max_tokens.into())
-                    .temperature(config.temperature.into())
+                    .temperature(config.temperature)
                     .tool(file_explorer.clone())
                     .tool(file_reader.clone())
                     .tool(tool_time)
@@ -204,7 +204,7 @@ impl ProviderClient {
                     .agent(model)
                     .preamble(system_prompt)
                     .max_tokens(config.max_tokens.into())
-                    .temperature(config.temperature.into())
+                    .temperature(config.temperature)
                     .tool(file_explorer.clone())
                     .tool(file_reader.clone())
                     .tool(tool_time)
@@ -215,7 +215,7 @@ impl ProviderClient {
                 let agent = client
                     .agent(model)
                     .preamble(system_prompt)
-                    .temperature(config.temperature.into())
+                    .temperature(config.temperature)
                     .tool(file_explorer.clone())
                     .tool(file_reader.clone())
                     .tool(tool_time)
@@ -226,7 +226,7 @@ impl ProviderClient {
                 let agent = client
                     .agent(model)
                     .preamble(system_prompt)
-                    .temperature(config.temperature.into())
+                    .temperature(config.temperature)
                     .tool(file_explorer.clone())
                     .tool(file_reader.clone())
                     .tool(tool_time)
@@ -238,7 +238,7 @@ impl ProviderClient {
                     .agent(model)
                     .preamble(system_prompt)
                     .max_tokens(config.max_tokens.into())
-                    .temperature(config.temperature.into())
+                    .temperature(config.temperature)
                     .tool(file_explorer.clone())
                     .tool(file_reader.clone())
                     .tool(tool_time)
@@ -253,7 +253,7 @@ impl ProviderClient {
                     .agent(model)
                     .preamble(system_prompt)
                     .max_tokens(config.max_tokens.into())
-                    .temperature(config.temperature.into())
+                    .temperature(config.temperature)
                     .tool(file_explorer.clone())
                     .tool(file_reader.clone())
                     .tool(tool_time)
@@ -266,7 +266,7 @@ impl ProviderClient {
                     .agent(model)
                     .preamble(system_prompt)
                     .max_tokens(config.max_tokens.into())
-                    .temperature(config.temperature.into())
+                    .temperature(config.temperature)
                     .tool(file_explorer.clone())
                     .tool(file_reader.clone())
                     .tool(tool_time)

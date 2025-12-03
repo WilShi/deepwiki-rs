@@ -7,6 +7,7 @@ impl MemoryScope {
     pub const STUDIES_RESEARCH: &'static str = "studies_research";
 }
 
+#[allow(async_fn_in_trait)]
 pub trait MemoryRetriever {
     async fn store_research(&self, agent_type: &str, result: Value) -> anyhow::Result<()>;
 

@@ -12,6 +12,12 @@ pub struct RelationshipsAnalyze {
     prompt_compressor: PromptCompressor,
 }
 
+impl Default for RelationshipsAnalyze {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl RelationshipsAnalyze {
     pub fn new() -> Self {
         Self {
@@ -75,7 +81,39 @@ impl RelationshipsAnalyze {
 1. 核心模块间的依赖关系
 2. 关键数据流向
 3. 架构层次结构
-4. 潜在的循环依赖",
+4. 潜在的循环依赖
+
+## 输出格式要求
+请返回以下JSON格式的分析结果：
+
+JSON输出模板：
+{{
+  \"core_dependencies\": [
+    {{
+      \"from\": \"源组件名称\",
+      \"to\": \"目标组件名称\", 
+      \"dependency_type\": \"使用以下枚举值之一\",
+      \"importance\": 重要性评分1-5,
+      \"description\": \"简要描述\"
+    }}
+  ],
+  \"architecture_layers\": [
+    {{
+      \"layer_name\": \"层次名称\",
+      \"description\": \"层次描述\",
+      \"components\": [\"组件列表\"]
+    }}
+  ],
+  \"key_insights\": [\"关键洞察列表\"]
+}}
+
+### 依赖类型枚举值（请选择最匹配的一个）：
+- **Import**: 导入依赖（use、import语句）
+- **FunctionCall**: 函数调用依赖
+- **Inheritance**: 继承关系
+- **Composition**: 组合关系
+- **DataFlow**: 数据流依赖
+- **Module**: 模块依赖",
             compressed_insights
         );
 

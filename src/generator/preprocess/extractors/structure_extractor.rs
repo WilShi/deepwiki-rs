@@ -10,7 +10,7 @@ use anyhow::Result;
 use futures::future::BoxFuture;
 use std::collections::HashMap;
 use std::fs::Metadata;
-use std::path::PathBuf;
+use std::path::Path;
 
 /// 项目结构提取器
 pub struct StructureExtractor {
@@ -29,7 +29,7 @@ impl StructureExtractor {
     }
 
     /// 提取项目结构
-    pub async fn extract_structure(&self, project_path: &PathBuf) -> Result<ProjectStructure> {
+    pub async fn extract_structure(&self, project_path: &Path) -> Result<ProjectStructure> {
         let cache_key = format!("structure_{}", project_path.display());
 
         // 执行结构提取
@@ -46,7 +46,7 @@ impl StructureExtractor {
         Ok(structure)
     }
 
-    async fn extract_structure_impl(&self, project_path: &PathBuf) -> Result<ProjectStructure> {
+    async fn extract_structure_impl(&self, project_path: &Path) -> Result<ProjectStructure> {
         let mut directories = Vec::new();
         let mut files = Vec::new();
         let mut file_types = HashMap::new();
@@ -72,7 +72,7 @@ impl StructureExtractor {
 
         Ok(ProjectStructure {
             project_name,
-            root_path: project_path.clone(),
+            root_path: project_path.to_path_buf(),
             total_files: files.len(),
             total_directories: directories.len(),
             directories,
@@ -84,8 +84,8 @@ impl StructureExtractor {
 
     fn scan_directory<'a>(
         &'a self,
-        current_path: &'a PathBuf,
-        root_path: &'a PathBuf,
+        current_path: &'a Path,
+        root_path: &'a Path,
         directories: &'a mut Vec<DirectoryInfo>,
         files: &'a mut Vec<FileInfo>,
         file_types: &'a mut HashMap<String, usize>,
@@ -109,23 +109,23 @@ impl StructureExtractor {
 
                 if file_type.is_file() {
                     // 检查是否应该忽略此文件
-                    if !self.should_ignore_file(&path) {
-                        if let Ok(metadata) = std::fs::metadata(&path) {
-                            let file_info = self.create_file_info(&path, root_path, &metadata)?;
+                    if !self.should_ignore_file(&path)
+                        && let Ok(metadata) = std::fs::metadata(&path)
+                    {
+                        let file_info = self.create_file_info(&path, root_path, &metadata)?;
 
-                            // 更新统计信息
-                            if let Some(ext) = &file_info.extension {
-                                *file_types.entry(ext.clone()).or_insert(0) += 1;
-                            }
-
-                            let size_category = self.categorize_file_size(file_info.size);
-                            *size_distribution.entry(size_category).or_insert(0) += 1;
-
-                            dir_file_count += 1;
-                            dir_total_size += file_info.size;
-
-                            files.push(file_info);
+                        // 更新统计信息
+                        if let Some(ext) = &file_info.extension {
+                            *file_types.entry(ext.clone()).or_insert(0) += 1;
                         }
+
+                        let size_category = self.categorize_file_size(file_info.size);
+                        *size_distribution.entry(size_category).or_insert(0) += 1;
+
+                        dir_file_count += 1;
+                        dir_total_size += file_info.size;
+
+                        files.push(file_info);
                     }
                 } else if file_type.is_dir() {
                     let dir_name = path
@@ -157,7 +157,7 @@ impl StructureExtractor {
             // 创建目录信息
             if current_path != root_path {
                 let dir_info = DirectoryInfo {
-                    path: current_path.clone(),
+                    path: current_path.to_path_buf(),
                     name: current_path
                         .file_name()
                         .unwrap_or_default()
@@ -177,8 +177,8 @@ impl StructureExtractor {
 
     fn create_file_info(
         &self,
-        path: &PathBuf,
-        root_path: &PathBuf,
+        path: &Path,
+        root_path: &Path,
         metadata: &Metadata,
     ) -> Result<FileInfo> {
         let name = path
@@ -246,7 +246,7 @@ impl StructureExtractor {
         false
     }
 
-    fn should_ignore_file(&self, path: &PathBuf) -> bool {
+    fn should_ignore_file(&self, path: &Path) -> bool {
         let config = &self.context.config;
         let file_name = path
             .file_name()
@@ -270,13 +270,12 @@ impl StructureExtractor {
         }
 
         // 检查排除的扩展名
-        if let Some(extension) = path.extension().and_then(|e| e.to_str()) {
-            if config
+        if let Some(extension) = path.extension().and_then(|e| e.to_str())
+            && config
                 .excluded_extensions
                 .contains(&extension.to_lowercase())
-            {
-                return true;
-            }
+        {
+            return true;
         }
 
         // 检查包含的扩展名（如果指定了）
@@ -304,10 +303,10 @@ impl StructureExtractor {
         }
 
         // 检查文件大小
-        if let Ok(metadata) = std::fs::metadata(path) {
-            if metadata.len() > config.max_file_size {
-                return true;
-            }
+        if let Ok(metadata) = std::fs::metadata(path)
+            && metadata.len() > config.max_file_size
+        {
+            return true;
         }
 
         // 检查二进制文件
